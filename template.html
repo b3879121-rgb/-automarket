@@ -584,7 +584,8 @@ const D = JSON.parse(document.getElementById("report-data").textContent);
 const DATES = JSON.parse(document.getElementById("report-dates").textContent);
 const $ = (s) => document.querySelector(s);
 // 透過本機伺服器開啟（http://127.0.0.1:8765）時，才能新增／刪除自選股與自動更新
-const SERVER = location.protocol.startsWith("http");
+const SERVER = ["127.0.0.1", "localhost"].includes(location.hostname);
+const WEB = location.protocol.startsWith("http") && !SERVER;   // GitHub Pages 等網站上的唯讀版
 const IS_LATEST = D.date === DATES[0];
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -1197,6 +1198,7 @@ function drawAc() {
   box.querySelectorAll("button[data-i]").forEach((b) => b.onmousedown = (e) => { e.preventDefault(); addStock(acItems[+b.dataset.i].code); });
 }
 function initAdder() {
+  if (WEB) { $("#readonly").hidden = false; $("#readonly").textContent = "這是網站唯讀版，每天收盤後自動更新。新增或刪除自選股請在自己電腦上的儀表板操作。"; return; }
   if (!SERVER) { $("#readonly").hidden = false; return; }
   if (!IS_LATEST) { $("#readonly").hidden = false; $("#readonly").textContent = "這是過去日期的報告，只能瀏覽。回到最新日期即可新增或刪除自選股。"; return; }
   $("#adder").hidden = false;
