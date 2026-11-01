@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>晨間台美市場速覽儀表板 — 專業旗艦版 V2.0</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    /* Tabular numerals & smooth styling */
+    .num-font {
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum";
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 9999px;
+    }
+    /* Running ticker animation */
+    @keyframes ticker {
+      0% { transform: translateX(0%); }
+      100% { transform: translateX(-50%); }
+    }
+    .animate-ticker {
+      display: inline-flex;
+      white-space: nowrap;
+      animation: ticker 38s linear infinite;
+    }
+    .animate-ticker:hover {
+      animation-play-state: paused;
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-3 sm:p-5 md:p-6 select-none font-sans">
+  <div class="max-w-7xl mx-auto space-y-5">
+
+    <!-- [Module A-1] Global Macro Ticker Bar (Top Bloomberg-Style Streamer) -->
+    <div class="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg overflow-hidden py-2 px-3 shadow-xs">
+      <div class="flex items-center gap-3">
+        <span class="flex-shrink-0 flex items-center gap-1.5 px-2 py-0.5 text-xs font-bold rounded bg-[var(--primary)] text-[var(--primary-foreground)]">
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          MARKET TICKER
+        </span>
+        <div class="overflow-hidden relative w-full text-xs text-[var(--muted-foreground)]">
+          <div class="animate-ticker space-x-6 num-font">
+            <span class="inline-flex items-center gap-1.5 font-medium">
+              <span>台指期夜盤</span>
+              <strong class="text-[var(--foreground)]">46,410</strong>
+              <span data-trend="up" class="trend-text font-bold">+117 (+0.25%)</span>
+            </span>
+            <span>•</span>
+            <span class="inline-flex items-center gap-1.5 font-medium">
+              <span>台積電 ADR (TSM)</span>
+              <strong class="text-[var(--foreground)]">$425.08</strong>
+              <span data-trend="up" class="trend-text font-bold">+1.16%</span>
+            </span>
+            <span>•</span>
+            <span class="inline-flex items-center gap-1.5 font-medium">
+              <span>輝達 (NVDA)</span>
+              <strong class="text-[var(--foreground)]">$216.47</strong>
+              <span data-trend="down" class="trend-text font-bold">-0.29%</span>
+            </span>
+            <span>•</span>
+            <span class="inline-flex items-center gap-1.5 font-medium">
+              <span>美元 / 新台幣 (USD/TWD)</span>
+              <strong class="text-[var(--foreground)]">32.185</strong>
+              <span data-trend="down" class="trend-text font-bold">-0.045 (台幣小升)</span>
+            </span>
+            <span>•</span>
+            <span class="inline-flex items-center gap-1.5 font-medium">
+              <span>美債 10 年期殖利率</span>
+              <strong class="text-[var(--foreground)]">4.082%</strong>
+              <span data-trend="down" class="trend-text font-bold">-2.1 bps</span>
+            </span>
+            <span>•</span>
+            <span class="inline-flex items-center gap-1.5 font-medium">
+              <span>VIX 恐慌指數</span>
+              <strong class="text-[var(--foreground)]">14.65</strong>
+              <span data-trend="down" class="trend-text font-bold">-0.48 (市場情緒穩定)</span>
+            </span>
+            <span>•</span>
+            <!-- Duplicate for seamless infinite loop -->
+            <span class="inline-flex items-center gap-1.5 font-medium">
+              <span>台指期夜盤</span>
+              <strong class="text-[var(--foreground)]">46,410</strong>
+              <span data-trend="up" class="trend-text font-bold">+117 (+0.25%)</span>
+            </span>
+            <span>•</span>
+            <span class="inline-flex items-center gap-1.5 font-medium">
+              <span>台積電 ADR (TSM)</span>
+              <strong class="text-[var(--foreground)]">$425.08</strong>
+              <span data-trend="up" class="trend-text font-bold">+1.16%</span>
+            </span>
+            <span>•</span>
+            <span class="inline-flex items-center gap-1.5 font-medium">
+              <span>輝達 (NVDA)</span>
+              <strong class="text-[var(--foreground)]">$216.47</strong>
+              <span data-trend="down" class="trend-text font-bold">-0.29%</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header Navigation & Action Tools (C: LINE Export / Print) -->
+    <header class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--border)]">
+            BLOOMBERG-GRADE QUANT PANEL
+          </span>
+          <span class="text-xs text-[var(--muted-foreground)]">基準日：2026/10/20 盤後 + 10/21 盤前夜盤 ｜ 08:30 晨會速覽</span>
+        </div>
+        <h1 class="text-xl md:text-2xl font-black text-[var(--foreground)] tracking-tight mt-1.5 flex items-center gap-2">
+          晨間台美市場速覽儀表板 <span class="text-xs font-semibold px-2 py-0.5 rounded bg-[var(--primary)] text-[var(--primary-foreground)]">V2.0 旗艦版</span>
+        </h1>
+        <p class="text-xs sm:text-sm text-[var(--muted-foreground)] mt-1">
+          台指夜盤領先反彈收 46,410 點（轉正價差 +117 點）、TSM ADR +1.16%；外資台指空單連 3 補降至 8.9 萬口；完整覆蓋自選 12 檔重點股。
+        </p>
+      </div>
+
+      <!-- Control Toolbar: Color toggle & C-3 One-click copy/export -->
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <!-- Palette Switch -->
+        <div class="flex items-center bg-[var(--background)] p-1 rounded-lg border border-[var(--border)] text-xs">
+          <button id="btn-tw-color" onclick="setColorScheme('tw')" class="px-2.5 py-1 rounded text-xs font-semibold transition-all">
+            台股紅漲
+          </button>
+          <button id="btn-us-color" onclick="setColorScheme('us')" class="px-2.5 py-1 rounded text-xs font-semibold transition-all">
+            國際綠漲
+          </button>
+        </div>
+
+        <!-- [Module C-3] Export / Copy Morning Briefing -->
+        <button onclick="copyMorningBriefing()" id="btn-copy-brief" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[var(--secondary)] text-[var(--secondary-foreground)] hover:bg-[var(--border)] border border-[var(--border)] transition-all">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+          <span id="copy-btn-text">複製 LINE 晨報</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- [Module A-2] Top KPI Metric Cards (With Night Futures & Basis) -->
+    <section aria-label="核心指標卡片" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- KPI 1: SOX & Key US Stocks -->
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-[var(--muted-foreground)] uppercase">費城半導體 (SOX)</span>
+          <span class="text-xs text-[var(--muted-foreground)]">10/20 美股收盤</span>
+        </div>
+        <div class="mt-2.5 flex items-baseline justify-between num-font">
+          <span class="text-2xl font-bold tracking-tight">11,283.81</span>
+          <span data-trend="down" class="trend-badge px-2 py-0.5 rounded text-xs font-bold">
+            ▼ -32.53 (-0.29%)
+          </span>
+        </div>
+        <div class="mt-2.5 pt-2 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--muted-foreground)] num-font">
+          <span>TSM ADR <strong data-trend="up" class="trend-text font-bold">+1.16%</strong></span>
+          <span>NVDA <strong data-trend="down" class="trend-text font-bold">-0.29%</strong></span>
+          <span>AMD <strong data-trend="down" class="trend-text font-bold">-0.08%</strong></span>
+        </div>
+      </div>
+
+      <!-- KPI 2: TAIEX Day Close vs Night Futures & Basis -->
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-[var(--muted-foreground)] uppercase">台股大盤 ｜ 台指夜盤</span>
+          <span class="text-xs text-[var(--muted-foreground)]">成交 7,587 億</span>
+        </div>
+        <div class="mt-2.5 flex items-baseline justify-between num-font">
+          <div>
+            <div class="text-xl font-bold tracking-tight">46,292.93 <span class="text-xs font-normal text-[var(--muted-foreground)]">日盤收</span></div>
+          </div>
+          <span data-trend="down" class="trend-badge px-2 py-0.5 rounded text-xs font-bold">
+            -529.15 (-1.13%)
+          </span>
+        </div>
+        <div class="mt-2.5 pt-2 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--muted-foreground)] num-font">
+          <span>夜盤收：<strong class="text-[var(--foreground)] font-bold">46,410</strong></span>
+          <span class="px-1.5 py-0.5 rounded bg-[var(--background)] border border-[var(--border)]">
+            正價差：<strong data-trend="up" class="trend-text font-bold">+117.07 點</strong>
+          </span>
+        </div>
+      </div>
+
+      <!-- KPI 3: Foreign Futures Net Short OI -->
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-[var(--muted-foreground)] uppercase">外資台指期淨未平倉</span>
+          <span class="text-xs text-[var(--muted-foreground)]">多空比 11.38%</span>
+        </div>
+        <div class="mt-2.5 flex items-baseline justify-between num-font">
+          <span class="text-2xl font-bold tracking-tight">-89,748 <span class="text-xs font-normal text-[var(--muted-foreground)]">口</span></span>
+          <span data-trend="up" class="trend-badge px-2 py-0.5 rounded text-xs font-bold">
+            ▲ 空單減 1,397 口
+          </span>
+        </div>
+        <div class="mt-2.5 pt-2 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--muted-foreground)] num-font">
+          <span>連 3 日高檔回補共 7,834 口</span>
+          <span class="text-emerald-500 font-medium">殺盤力道鈍化</span>
+        </div>
+      </div>
+
+      <!-- KPI 4: Institutional Flows & Lending -->
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-[var(--muted-foreground)] uppercase">三大法人現貨買賣超</span>
+          <span class="text-xs text-[var(--muted-foreground)]">外資連 10 賣</span>
+        </div>
+        <div class="mt-2.5 flex items-baseline justify-between num-font">
+          <span class="text-2xl font-bold tracking-tight">-968.04 <span class="text-xs font-normal text-[var(--muted-foreground)]">億元</span></span>
+          <span data-trend="down" class="trend-badge px-2 py-0.5 rounded text-xs font-bold">
+            ▼ 外資 -795.40 億
+          </span>
+        </div>
+        <div class="mt-2.5 pt-2 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--muted-foreground)] num-font">
+          <span>投信 <strong data-trend="up" class="trend-text font-bold">+183.15 億</strong></span>
+          <span>自營商 <strong data-trend="down" class="trend-text font-bold">-355.80 億</strong></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- [Module B] Deep Quant: Options Structure (Max Pain, PC Ratio) & Institutional Charts -->
+    <section aria-label="籌碼量化深度分析" class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      
+      <!-- Left: Institutional Flow Bar Chart & 6-Day Futures Trend (7 Cols) -->
+      <div class="lg:col-span-7 space-y-5">
+        <!-- Chart 1: Bar Chart of Institutional Flows -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 shadow-sm">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-[var(--foreground)] flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-[var(--primary)]"></span>
+              三大法人現貨買賣超結構與借券動態（單位：億元）
+            </h2>
+            <span class="text-xs text-[var(--muted-foreground)]">10/20 盤後</span>
+          </div>
+          <div id="bar-chart-container" class="mt-3.5 w-full"></div>
+        </div>
+
+        <!-- Chart 2: Foreign Net Short OI Trend -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 shadow-sm">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-[var(--foreground)] flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-[var(--primary)]"></span>
+              外資台指期未平倉淨空單 6 日走勢（連 3 縮減）
+            </h2>
+            <span class="text-xs text-[var(--muted-foreground)]">10/13 - 10/20</span>
+          </div>
+          <div id="line-chart-container" class="mt-3 w-full"></div>
+        </div>
+      </div>
+
+      <!-- Right: [Module B-1 & B-2] Options Max Pain, PC Ratio & Borrowed Stock Selling (5 Cols) -->
+      <div class="lg:col-span-5 bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 shadow-sm flex flex-col justify-between space-y-4">
+        <div>
+          <div class="flex items-center justify-between border-b border-[var(--border)] pb-2.5">
+            <div>
+              <h2 class="text-sm font-bold text-[var(--foreground)]">選擇權多空籌碼與大盤支撐壓力 (Max Pain)</h2>
+              <p class="text-xs text-[var(--muted-foreground)]">全月份台指選擇權 OI 分布與莊家避險邊界</p>
+            </div>
+            <span class="px-2 py-0.5 text-xs font-bold rounded bg-[var(--secondary)] text-[var(--secondary-foreground)]">結算定位</span>
+          </div>
+
+          <!-- Options Indicators Metric Grid -->
+          <div class="grid grid-cols-2 gap-3 mt-3.5">
+            <div class="p-3 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+              <span class="text-xs text-[var(--muted-foreground)] block">全月 P/C Ratio (未平倉比)</span>
+              <div class="text-lg font-bold num-font mt-0.5 text-[var(--foreground)]">84.26%</div>
+              <span class="text-xs text-amber-500 font-medium">空方主導但未跌破 80% 警戒</span>
+            </div>
+            <div class="p-3 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+              <span class="text-xs text-[var(--muted-foreground)] block">選擇權最大痛點 (Max Pain)</span>
+              <div class="text-lg font-bold num-font mt-0.5 text-[var(--foreground)]">46,500 點</div>
+              <span class="text-xs text-blue-500 font-medium">莊家期望結算引力區</span>
+            </div>
+          </div>
+
+          <!-- Max Pain Visual Range -->
+          <div class="mt-4 p-3.5 rounded-lg bg-[var(--background)] border border-[var(--border)] space-y-2.5 text-xs">
+            <div class="font-bold text-[var(--foreground)] flex justify-between">
+              <span>關鍵未平倉口數攻防防線</span>
+              <span class="text-[var(--muted-foreground)]">履約價區間</span>
+            </div>
+            
+            <!-- Call Resistance -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-rose-500 font-semibold">▲ 買權最大未平倉 (壓力區)：47,000 點</span>
+                <span class="num-font text-[var(--muted-foreground)]">24,850 口</span>
+              </div>
+              <div class="w-full bg-[var(--border)] h-2 rounded-full overflow-hidden">
+                <div class="bg-rose-500 h-2 rounded-full" style="width: 82%;"></div>
+              </div>
+            </div>
+
+            <!-- Current Price Position -->
+            <div class="py-1 px-2.5 rounded bg-[var(--card)] border border-[var(--border)] flex justify-between items-center text-xs">
+              <span class="text-[var(--muted-foreground)]">現貨收盤 (46,293) ｜ 夜盤 (46,410)</span>
+              <span class="font-bold text-amber-500">位於中樞下方震盪</span>
+            </div>
+
+            <!-- Put Support -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-emerald-500 font-semibold">▼ 賣權最大未平倉 (支撐區)：46,000 點</span>
+                <span class="num-font text-[var(--muted-foreground)]">31,240 口</span>
+              </div>
+              <div class="w-full bg-[var(--border)] h-2 rounded-full overflow-hidden">
+                <div class="bg-emerald-500 h-2 rounded-full" style="width: 95%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Module B-3: Borrowed Selling Balance & Institutional Streak -->
+          <div class="mt-4 p-3 rounded-lg bg-[var(--background)] border border-[var(--border)] space-y-1.5 text-xs">
+            <div class="font-bold text-[var(--foreground)]">外資借券與內資連買動態：</div>
+            <div class="text-[var(--muted-foreground)] leading-relaxed">
+              • <strong>外資借券賣出餘額</strong>：10/20 當日增加 14,210 張（整體水位收斂，空方回補意願增強）。<br/>
+              • <strong>投信動向</strong>：連 14 個交易日買超，累計買超破 1,120 億元，投信認養高股息與 AI 組裝廠籌碼穩固。
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-2 text-xs text-[var(--muted-foreground)] flex justify-between items-center border-t border-[var(--border)]">
+          <span>量化多空判定：<strong>短線跌深反彈，區間震盪</strong></span>
+          <span class="text-emerald-500 font-bold">46,000 強力下檔支撐</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- [Module A-3 & A-4] Structured Data Table with Sparklines, Live Search & Sorting -->
+    <section aria-label="自選科技股表現與 Sparkline" class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 shadow-sm space-y-4">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-base font-bold text-[var(--foreground)]">重點美台科技權值與自選股追蹤</h2>
+            <span class="px-2 py-0.5 text-xs font-bold rounded bg-[var(--primary)] text-[var(--primary-foreground)]">共 18 檔</span>
+            <span class="text-xs text-[var(--muted-foreground)]">（內嵌近 5 日 Sparkline 微型走勢圖）</span>
+          </div>
+          <p class="text-xs text-[var(--muted-foreground)] mt-0.5">點擊各欄位標題可即時排序；可直接於右側輸入關鍵字快速過濾。</p>
+        </div>
+
+        <!-- Filter Buttons & Search Input -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <div class="relative">
+            <input 
+              type="text" 
+              id="stock-search-input" 
+              oninput="handleSearch(this.value)"
+              placeholder="搜尋代號 / 名稱 / 族群..." 
+              class="w-48 sm:w-56 px-3 py-1.5 text-xs rounded-lg bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-hidden focus:ring-1 focus:ring-[var(--primary)]"
+            />
+          </div>
+
+          <div class="flex items-center gap-1 bg-[var(--background)] p-1 rounded-lg border border-[var(--border)]">
+            <button onclick="filterTable('all')" id="filter-all" class="px-2.5 py-1 rounded text-xs font-semibold transition-all bg-[var(--primary)] text-[var(--primary-foreground)]">
+              全部 (18)
+            </button>
+            <button onclick="filterTable('custom')" id="filter-custom" class="px-2.5 py-1 rounded text-xs font-semibold transition-all text-[var(--muted-foreground)]">
+              我的自選 (12)
+            </button>
+            <button onclick="filterTable('tw_core')" id="filter-tw_core" class="px-2.5 py-1 rounded text-xs font-semibold transition-all text-[var(--muted-foreground)]">
+              權值三雄 (3)
+            </button>
+            <button onclick="filterTable('us')" id="filter-us" class="px-2.5 py-1 rounded text-xs font-semibold transition-all text-[var(--muted-foreground)]">
+              美股費半 (4)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table Body -->
+      <div class="overflow-x-auto custom-scrollbar border border-[var(--border)] rounded-lg">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead class="bg-[var(--background)] border-b border-[var(--border)] text-[var(--muted-foreground)] uppercase">
+            <tr>
+              <th onclick="sortTable('name')" class="py-3 px-3 cursor-pointer hover:text-[var(--foreground)] transition-colors">
+                代號 / 標的名稱 <span id="sort-icon-name">↕</span>
+              </th>
+              <th onclick="sortTable('close')" class="py-3 px-3 text-right cursor-pointer hover:text-[var(--foreground)] transition-colors">
+                昨日收盤價 <span id="sort-icon-close">↕</span>
+              </th>
+              <th onclick="sortTable('changePct')" class="py-3 px-3 text-right cursor-pointer hover:text-[var(--foreground)] transition-colors">
+                昨日漲跌幅 <span id="sort-icon-changePct">↕</span>
+              </th>
+              <th class="py-3 px-3 text-center">近 5 日走勢 (Sparkline)</th>
+              <th class="py-3 px-3">法人籌碼 / 資金動能</th>
+              <th class="py-3 px-3">核心驅動原因與今日觀盤重點</th>
+            </tr>
+          </thead>
+          <tbody id="stock-table-body" class="divide-y divide-[var(--border)] bg-[var(--card)]">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- [Module C] Interactive Daily Tools: Checklist, Calculator & Market Scenarios -->
+    <section aria-label="盤前互動操盤工具箱" class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      
+      <!-- C-1: Interactive Intraday Checklist & Scenarios (7 Cols) -->
+      <div class="lg:col-span-7 bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-[var(--border)] pb-2.5">
+          <h2 class="text-sm font-bold text-[var(--foreground)] flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            開盤 15 分鐘策略檢核清單 (Interactive Checklist)
+          </h2>
+          <span class="text-xs text-[var(--muted-foreground)]">點擊可即時勾選記錄</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5" id="checklist-container">
+          <!-- Dynamically populated or static togglable items -->
+          <label class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)] flex items-start gap-2.5 cursor-pointer hover:bg-[var(--card)] transition-colors">
+            <input type="checkbox" class="mt-0.5 rounded border-[var(--border)] text-[var(--primary)] focus:ring-0" />
+            <div class="text-xs">
+              <span class="font-bold text-[var(--foreground)] block">08:45 台指期開盤價</span>
+              <span class="text-[var(--muted-foreground)]">是否開在 46,400 之上維持夜盤漲勢</span>
+            </div>
+          </label>
+
+          <label class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)] flex items-start gap-2.5 cursor-pointer hover:bg-[var(--card)] transition-colors">
+            <input type="checkbox" class="mt-0.5 rounded border-[var(--border)] text-[var(--primary)] focus:ring-0" />
+            <div class="text-xs">
+              <span class="font-bold text-[var(--foreground)] block">09:00 台積電 (2330) 試撮</span>
+              <span class="text-[var(--muted-foreground)]">早盤能否站上 2,420 元化解破線壓力</span>
+            </div>
+          </label>
+
+          <label class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)] flex items-start gap-2.5 cursor-pointer hover:bg-[var(--card)] transition-colors">
+            <input type="checkbox" class="mt-0.5 rounded border-[var(--border)] text-[var(--primary)] focus:ring-0" />
+            <div class="text-xs">
+              <span class="font-bold text-[var(--foreground)] block">預估全日成交量能</span>
+              <span class="text-[var(--muted-foreground)]">宜在 6,500 ~ 7,000 億元間溫和換手</span>
+            </div>
+          </label>
+
+          <label class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)] flex items-start gap-2.5 cursor-pointer hover:bg-[var(--card)] transition-colors">
+            <input type="checkbox" class="mt-0.5 rounded border-[var(--border)] text-[var(--primary)] focus:ring-0" />
+            <div class="text-xs">
+              <span class="font-bold text-[var(--foreground)] block">自選強勢股續航力</span>
+              <span class="text-[var(--muted-foreground)]">毅嘉 (2402)、順達 (3211) 盤中是否續強</span>
+            </div>
+          </label>
+        </div>
+
+        <!-- 3 Scenarios Simulation -->
+        <div class="pt-3 border-t border-[var(--border)]">
+          <div class="flex items-center justify-between mb-2.5">
+            <span class="text-xs font-bold text-[var(--foreground)]">今日盤勢情境模擬切換</span>
+            <span class="text-xs text-[var(--muted-foreground)]">前日收盤：46,292 點</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2 mb-3">
+            <button onclick="selectScenario('base')" id="scen-base" class="py-1.5 px-2 rounded text-xs font-bold transition-all bg-[var(--primary)] text-[var(--primary-foreground)]">
+              基準情境 (55%)
+            </button>
+            <button onclick="selectScenario('bull')" id="scen-bull" class="py-1.5 px-2 rounded text-xs font-bold transition-all text-[var(--muted-foreground)]">
+              樂觀反彈 (25%)
+            </button>
+            <button onclick="selectScenario('bear')" id="scen-bear" class="py-1.5 px-2 rounded text-xs font-bold transition-all text-[var(--muted-foreground)]">
+              保守測底 (20%)
+            </button>
+          </div>
+          <div id="scenario-card" class="p-3.5 rounded-lg bg-[var(--background)] border border-[var(--border)] text-xs space-y-1.5">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- C-2: Position Profit/Loss & Stop-Loss Calculator (5 Cols) -->
+      <div class="lg:col-span-5 bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 shadow-sm flex flex-col justify-between space-y-4">
+        <div>
+          <div class="flex items-center justify-between border-b border-[var(--border)] pb-2.5">
+            <div>
+              <h2 class="text-sm font-bold text-[var(--foreground)]">自選部位損益與停損停利試算器</h2>
+              <p class="text-xs text-[var(--muted-foreground)]">快速推算風險報酬比與防守價位</p>
+            </div>
+            <span class="px-2 py-0.5 text-xs font-bold rounded bg-blue-500/10 text-blue-500">操盤工具</span>
+          </div>
+
+          <div class="mt-3.5 space-y-3 text-xs">
+            <!-- Stock Select -->
+            <div>
+              <label class="text-[var(--muted-foreground)] block mb-1">選擇自選標的：</label>
+              <select id="calc-stock-select" onchange="autoFillCurrentPrice()" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)]">
+                <!-- Dynamically filled -->
+              </select>
+            </div>
+
+            <!-- Cost & Shares Input -->
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="text-[var(--muted-foreground)] block mb-1">買進成本價 (元)：</label>
+                <input type="number" id="calc-cost" value="2400" oninput="calculatePosition()" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] num-font" />
+              </div>
+              <div>
+                <label class="text-[var(--muted-foreground)] block mb-1">持有股數 (股)：</label>
+                <input type="number" id="calc-shares" value="1000" oninput="calculatePosition()" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] num-font" />
+              </div>
+            </div>
+
+            <!-- Current Price -->
+            <div>
+              <label class="text-[var(--muted-foreground)] block mb-1">目前現價 (元)：</label>
+              <input type="number" id="calc-current" value="2405" oninput="calculatePosition()" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] num-font" />
+            </div>
+
+            <!-- Result Box -->
+            <div class="p-3 rounded-lg bg-[var(--background)] border border-[var(--border)] space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-[var(--muted-foreground)]">預估損益金額：</span>
+                <span id="res-pnl" class="text-sm font-bold num-font text-emerald-500">+5,000 元 (+0.21%)</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--border)] text-center">
+                <div class="p-1.5 rounded bg-[var(--card)]">
+                  <span class="text-[var(--muted-foreground)] block">嚴格停損 (-5%)</span>
+                  <strong id="res-stop-loss" class="text-rose-500 num-font font-bold">2,280.0 元</strong>
+                </div>
+                <div class="p-1.5 rounded bg-[var(--card)]">
+                  <span class="text-[var(--muted-foreground)] block">目標停利 (+10%)</span>
+                  <strong id="res-take-profit" class="text-emerald-500 num-font font-bold">2,640.0 元</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-[11px] text-[var(--muted-foreground)] text-center">
+          * 提示：開盤跌破 -5% 停損線或大盤帶量破 46,000 點時，建議嚴格調節資金部位。
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // State management
+    let currentColorScheme = 'tw'; // 'tw' = Red up / Green down; 'us' = Green up / Red down
+    let currentFilter = 'all';
+    let currentSearch = '';
+    let sortColumn = 'changePct';
+    let sortDirection = 'desc'; // 'asc' or 'desc'
+    let currentScenario = 'base';
+
+    // Institutional Flows Data
+    const institutionalData = [
+      { label: '外資及陸資', value: -795.40, note: '連 10 賣，賣壓集中台積' },
+      { label: '投信法人', value: 183.15, note: '連 14 買，逆勢承接' },
+      { label: '自營商(自行)', value: -68.55, note: '高檔順勢調節' },
+      { label: '自營商(避險)', value: -287.25, note: '權證避險空單' },
+      { label: '三大法人合計', value: -968.04, note: '單日現貨淨流出' }
+    ];
+
+    // Foreign Net Short Futures Trend
+    const futuresTrendData = [
+      { date: '10/13', netOI: -87239, shortMag: 87239 },
+      { date: '10/14', netOI: -86814, shortMag: 86814 },
+      { date: '10/15', netOI: -97582, shortMag: 97582 }, // Peak
+      { date: '10/16', netOI: -93675, shortMag: 93675 },
+      { date: '10/19', netOI: -91145, shortMag: 91145 },
+      { date: '10/20', netOI: -89748, shortMag: 89748 }  // Latest
+    ];
+
+    // 18 Comprehensive Stocks (Including 12 Custom Stocks & Sparkline 5-day series)
+    const stockData = [
+      // US Stocks
+      {
+        category: 'us',
+        isCustom: false,
+        badge: '美股 SOX',
+        code: 'TSM',
+        name: '台積電 ADR',
+        closeNum: 425.08,
+        close: '$425.08',
+        changePctNum: 1.16,
+        changePct: '+1.16%',
+        changeVal: '+$4.86',
+        trend: 'up',
+        history: [415, 412, 420, 418, 425.08],
+        flow: '外資長線機構逢低承接、溢價拉大',
+        reason: '2nm 與 CoWoS 產能滿載，費半回檔之際長線資金優先回補晶圓龍頭。'
+      },
+      {
+        category: 'us',
+        isCustom: false,
+        badge: '美股 SOX',
+        code: 'NVDA',
+        name: '輝達 NVIDIA',
+        closeNum: 216.47,
+        close: '$216.47',
+        changePctNum: -0.29,
+        changePct: '-0.29%',
+        changeVal: '-$0.62',
+        trend: 'down',
+        history: [222, 220, 218, 217, 216.47],
+        flow: '高檔量縮整理，資金輪動價值股',
+        reason: '市場觀望雲端 CapEx 展望，股價於 $215 頸線之上高檔蓄勢。'
+      },
+      {
+        category: 'us',
+        isCustom: false,
+        badge: '美股 SOX',
+        code: 'AMD',
+        name: '超微 AMD',
+        closeNum: 527.09,
+        close: '$527.09',
+        changePctNum: -0.08,
+        changePct: '-0.08%',
+        changeVal: '-$0.42',
+        trend: 'down',
+        history: [535, 530, 526, 528, 527.09],
+        flow: '機構多空拉鋸，維持橫盤震盪',
+        reason: '伺服器 CPU 需求持平，受美股科技股板塊資金輪動影響終場微跌。'
+      },
+      {
+        category: 'us',
+        isCustom: false,
+        badge: '美股 SOX',
+        code: 'AVGO',
+        name: '博通 Broadcom',
+        closeNum: 334.37,
+        close: '$334.37',
+        changePctNum: -0.07,
+        changePct: '-0.07%',
+        changeVal: '-$0.22',
+        trend: 'down',
+        history: [340, 338, 335, 336, 334.37],
+        flow: '大型基金鎖碼，波動率明顯收斂',
+        reason: '客製化 AI 晶片 (ASIC) 與乙太網晶片需求強勁，提供下檔支撐。'
+      },
+
+      // TW Core Stocks
+      {
+        category: 'tw_core',
+        isCustom: false,
+        badge: '台股權值',
+        code: '2330',
+        name: '台積電',
+        closeNum: 2405.0,
+        close: '2,405.0 元',
+        changePctNum: -0.62,
+        changePct: '-0.62%',
+        changeVal: '-15.0 元',
+        trend: 'down',
+        history: [2460, 2440, 2410, 2420, 2405],
+        flow: '外資賣 9,365 張（連 10 賣），投信護盤',
+        reason: '終場守住 2,400 整數大關；夜間 ADR +1.16% 奠定今日早盤開高反彈契機。'
+      },
+      {
+        category: 'tw_core',
+        isCustom: false,
+        badge: 'AI 伺服器',
+        code: '2382',
+        name: '廣達',
+        closeNum: 320.5,
+        close: '320.5 元',
+        changePctNum: 1.91,
+        changePct: '+1.91%',
+        changeVal: '+6.0 元',
+        trend: 'up',
+        history: [310, 312, 315, 314, 320.5],
+        flow: '三大法人同步買超，抗跌指標',
+        reason: 'GB200 機櫃出貨放量與 AI PC 滲透率提高，大盤重挫時逆勢收紅近 2%。'
+      },
+      {
+        category: 'tw_core',
+        isCustom: false,
+        badge: 'AI 伺服器',
+        code: '2317',
+        name: '鴻海',
+        closeNum: 241.5,
+        close: '241.5 元',
+        changePctNum: 0.84,
+        changePct: '+0.84%',
+        changeVal: '+2.0 元',
+        trend: 'up',
+        history: [238, 240, 239, 239.5, 241.5],
+        flow: '投信與外資低接點火，買盤積極',
+        reason: '伺服器機櫃組裝市占具防禦優勢，吸引高基期資金轉入低接。'
+      },
+
+      // 12 User Custom Stocks
+      {
+        category: 'custom',
+        isCustom: true,
+        badge: 'IC 設計 / 自選',
+        code: '2454',
+        name: '聯發科',
+        closeNum: 4150.0,
+        close: '4,150.0 元',
+        changePctNum: -1.31,
+        changePct: '-1.31%',
+        changeVal: '-55.0 元',
+        trend: 'down',
+        history: [4280, 4240, 4200, 4180, 4150],
+        flow: '外資連賣調節，高檔獲利了結',
+        reason: '受外資匯出壓抑高價股，測試 4,100~4,150 元區間支撐。'
+      },
+      {
+        category: 'custom',
+        isCustom: true,
+        badge: 'AI 電源 / 自選',
+        code: '2301',
+        name: '光寶科',
+        closeNum: 262.0,
+        close: '262.0 元',
+        changePctNum: -0.76,
+        changePct: '-0.76%',
+        changeVal: '-2.0 元',
+        trend: 'down',
+        history: [268, 266, 263, 264, 262],
+        flow: '投信續抱加碼，外資短線小調節',
+        reason: '雲端運算高階電源出貨比重拉升，260 元關卡具強大支撐。'
+      },
+      {
+        category: 'custom',
+        isCustom: true,
+        badge: 'AI 電源散熱 / 自選',
+        code: '2308',
+        name: '台達電',
+        closeNum: 1605.0,
+        close: '1,605.0 元',
+        changePctNum: -2.13,
+        changePct: '-2.13%',
+        changeVal: '-35.0 元',
+        trend: 'down',
+        history: [1680, 1660, 1630, 1620, 1605],
+        flow: '外資提款賣超，投信分批低接',
+        reason: '液冷散熱與 DC 轉 DC 轉換模組長線看好，拉回 1,600 元整數關卡測支撐。'
+      },
+      {
+        category: 'custom',
+        isCustom: true,
+        badge: '車載軟板 / 自選',
+        code: '2402',
+        name: '毅嘉',
+        closeNum: 60.1,
+        close: '60.1 元',
+        changePctNum: 1.69,
+        changePct: '+1.69%',
+        changeVal: '+1.0 元',
+        trend: 'up',
+        history: [57.5, 58.2, 58.8, 59.1, 60.1],
+        flow: '主力與自營買盤強勢點火突破',
+        reason: '車用電子與穿戴軟板新單放量，逆勢大盤強攻站上 60 元大關。'
+      },
+      {
+        category: 'custom',
+        isCustom: true,
+        badge: '測試代工 / 自選',
+        code: '2449',
+        name: '京元電',
+        closeNum: 259.5,
+        close: '259.5 元',
+        changePctNum: -1.52,
+        changePct: '-1.52%',
+        changeVal: '-4.0 元',
+        trend: 'down',
+        history: [268, 265, 262, 261, 259.5],
+        flow: '融資未見鬆動，法人短線換手',
+        reason: 'AI 晶片先進測試產能持續吃緊，回測 255~260 元頸線區域。'
+      },
+      {
+        category: 'custom',
+        isCustom: true,
+        badge: 'ABF 載板 / 自選',
+        code: '3037',
+        name: '欣興',
+        closeNum: 1055.0,
+        close: '1,055.0 元',
+        changePctNum: -5.80,
+        changePct: '-5.80%',
+        changeVal: '-65.0 元',
+        trend: 'down',
+        history: [1160, 1140, 1100, 1080, 1055],
+        flow: '外資與避險賣單重擊提款',
+        reason: '高價載板股承受重度賣壓，觀察千元大關與季線附近主力回補力道。'
+      },
+      {
+        category: 'custom',
+        isCustom: true,
+        badge: '伺服器 PCB / 自選',
+        code: '3044',
+        name: '健鼎',
+        closeNum: 567.0,
+        close: '567.0 元',
+        changePctNum: -1.73,
+        changePct: '-1.73%',
+        changeVal: '-10.0 元',
+        trend: 'down',
+        history: [585, 580, 574, 572, 567],
+        flow: '投信持股比率維持高檔',
+        reason: '記憶體模組與伺服器主板需求穩健，回檔幅度相對大盤有限。'
+      },
+      {
+        category: 'custom',
+        isCustom: true,
+        badge: '伺服器 BBU / 自選',
+        code: '3211',
+        name: '順達',
+        closeNum: 342.5,
+        close: '342.5 元',
+        changePctNum: -0.15,
+        changePct: '-0.15%',
+        changeVal: '-0.5 元',
+        trend: 'down',
+        history: [338, 340, 345, 343, 342.5],
+        flow: '內資主力鎖碼，強烈抗跌力道',
+        reason: 'AI 伺服器全面導入 BBU 電池備援系統，明年營收想像空間廣闊。'
+      },
+      {
+        category: 'custom',
+        isCustom: true,
+        badge: 'FOPLP 面板 / 自選',
+        code: '3481',
+        name: '群創',
+        closeNum: 46.8,
+        close: '46.8 元',
+        changePctNum: -0.32,
+        changePct: '-0.32%',
+        changeVal: '-0.15 元',
+        trend: 'down',
+        history: [48.0, 47.5, 47.0, 46.9, 46.8],
+        flow: '散戶持股安定，低檔量縮整理',
+        reason: '跨入面板級扇出型封裝 (FOPLP) 具轉型想像，46 元具防守支撐。'
+      },
+      {
+        category: 'custom',
+        isCustom: true,
+        badge: 'ASIC 設計 / 自選',
+        code: '3661',
+        name: '世芯-KY',
+        closeNum: 3640.0,
+        close: '3,640.0 元',
+        changePctNum: -2.02,
+        changePct: '-2.02%',
+        changeVal: '-75.0 元',
+        trend: 'down',
+        history: [3820, 3780, 3710, 3690, 3640],
+        flow: '外資獲利了結調節，投信逢低接',
+        reason: '北美雲端巨頭 ASIC 專案續行，短線受大盤重挫與高價股結帳拖累。'
+      },
+      {
+        category: 'custom',
+        isCustom: true,
+        badge: '高速傳輸線 / 自選',
+        code: '3665',
+        name: '貿聯-KY',
+        closeNum: 1925.0,
+        close: '1,925.0 元',
+        changePctNum: -2.53,
+        changePct: '-2.53%',
+        changeVal: '-50.0 元',
+        trend: 'down',
+        history: [2050, 2010, 1960, 1950, 1925],
+        flow: '短線漲多拉回換手，多頭均線未破',
+        reason: '高頻高速銅纜供不應求，回測 1,900 元大關尋求換手支撐。'
+      },
+      {
+        category: 'custom',
+        isCustom: true,
+        badge: '先進封裝龍頭 / 自選',
+        code: '3711',
+        name: '日月光投控',
+        closeNum: 660.0,
+        close: '660.0 元',
+        changePctNum: -1.49,
+        changePct: '-1.49%',
+        changeVal: '-10.0 元',
+        trend: 'down',
+        history: [685, 678, 665, 668, 660],
+        flow: '外資持續賣超，投信低檔買盤承接',
+        reason: '先進封裝擴產外溢效應顯現，台積電 ADR 收紅利今日止穩。'
+      }
+    ];
+
+    // Market Scenarios Data
+    const scenarios = {
+      base: {
+        title: '基準情境：台積領軍開高 +180 點，自選 AI 零組件分歧輪動',
+        prob: '發生機率 55%',
+        range: '預估指數區間：46,250 — 46,650 點',
+        summary: '台指夜盤上漲 117 點收 46,410、TSM ADR +1.16%，大盤開高機率高；期貨空單連 3 縮減至 8.9 萬口有利短線反彈；自選股中留意毅嘉 (2402)、順達 (3211) 續航力。',
+        action: '操盤建議：早盤避免過度追高，可逢低布局守穩均線之 AI 電源（光寶科、台達電）與高股息封測族群。'
+      },
+      bull: {
+        title: '樂觀反彈：外資期現貨同步回補，千金股全面攻堅挑戰 46,800',
+        prob: '發生機率 25%',
+        range: '預估指數區間：46,550 — 46,900 點',
+        summary: '若台幣止貶回升、外資空單進一步縮至 8.7 萬口以下，台積電攻上 2,430 元，將帶動超跌之世芯-KY、欣興與聯發科展開強勁軋空復仇走勢。',
+        action: '操盤建議：09:30 前若大盤逆價差完全收斂且委買量大增，可積極進場加碼跌深高彈性個股。'
+      },
+      bear: {
+        title: '保守測底：開高走低，外資現貨連 11 賣回測 46,000 點 Max Pain 支撐',
+        prob: '發生機率 20%',
+        range: '預估指數區間：45,950 — 46,350 點',
+        summary: '若逢高再度湧現外資被動型 ETF 賣壓，台積電無法守穩 2,410 元，大盤將回測選擇權最大賣權支撐 46,000 點。',
+        action: '操盤建議：嚴格執行停損，若個股跌破自選計算器之 -5% 停損防線，應立刻降低槓桿並保留現金。'
+      }
+    };
+
+    function getColors() {
+      if (currentColorScheme === 'tw') {
+        return {
+          upText: '#ef4444',
+          upBg: 'rgba(239, 68, 68, 0.14)',
+          upBorder: 'rgba(239, 68, 68, 0.35)',
+          downText: '#10b981',
+          downBg: 'rgba(16, 185, 129, 0.14)',
+          downBorder: 'rgba(16, 185, 129, 0.35)'
+        };
+      } else {
+        return {
+          upText: '#10b981',
+          upBg: 'rgba(16, 185, 129, 0.14)',
+          upBorder: 'rgba(16, 185, 129, 0.35)',
+          downText: '#ef4444',
+          downBg: 'rgba(239, 68, 68, 0.14)',
+          downBorder: 'rgba(239, 68, 68, 0.35)'
+        };
+      }
+    }
+
+    function applyThemeColors() {
+      const c = getColors();
+      const btnTw = document.getElementById('btn-tw-color');
+      const btnUs = document.getElementById('btn-us-color');
+      if (currentColorScheme === 'tw') {
+        btnTw.className = 'px-2.5 py-1 rounded text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] shadow-xs';
+        btnUs.className = 'px-2.5 py-1 rounded text-xs font-semibold text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
+      } else {
+        btnUs.className = 'px-2.5 py-1 rounded text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] shadow-xs';
+        btnTw.className = 'px-2.5 py-1 rounded text-xs font-semibold text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
+      }
+
+      document.querySelectorAll('.trend-badge').forEach(el => {
+        const t = el.getAttribute('data-trend');
+        if (t === 'up') {
+          el.style.color = c.upText;
+          el.style.backgroundColor = c.upBg;
+          el.style.border = `1px solid ${c.upBorder}`;
+        } else {
+          el.style.color = c.downText;
+          el.style.backgroundColor = c.downBg;
+          el.style.border = `1px solid ${c.downBorder}`;
+        }
+      });
+
+      document.querySelectorAll('.trend-text').forEach(el => {
+        const t = el.getAttribute('data-trend');
+        el.style.color = t === 'up' ? c.upText : c.downText;
+      });
+    }
+
+    function renderBarChart() {
+      const c = getColors();
+      const container = document.getElementById('bar-chart-container');
+      const maxAbs = 1050;
+
+      let rowsHtml = institutionalData.map(item => {
+        const isPos = item.value >= 0;
+        const pct = Math.min(Math.abs(item.value) / maxAbs * 50, 49);
+        const barColor = isPos ? c.upText : c.downText;
+        const sign = isPos ? '+' : '';
+
+        return `
+          <div class="grid grid-cols-12 items-center gap-2 py-1.5">
+            <div class="col-span-3 text-xs font-medium text-[var(--foreground)] truncate" title="${item.label}">
+              ${item.label}
+            </div>
+            <div class="col-span-6 relative h-6 bg-[var(--background)] rounded border border-[var(--border)] flex items-center">
+              <div class="absolute left-1/2 top-0 bottom-0 w-px bg-[var(--border)] z-10"></div>
+              ${isPos
+                ? `<div style="left: 50%; width: ${pct}%; background-color: ${barColor};" class="absolute h-3.5 rounded-r transition-all duration-300"></div>`
+                : `<div style="right: 50%; width: ${pct}%; background-color: ${barColor};" class="absolute h-3.5 rounded-l transition-all duration-300"></div>`
+              }
+            </div>
+            <div class="col-span-3 text-right num-font">
+              <span style="color: ${barColor};" class="text-xs font-bold">${sign}${item.value.toFixed(2)} 億</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="divide-y divide-[var(--border)]">
+          <div class="grid grid-cols-12 text-[11px] text-[var(--muted-foreground)] pb-1">
+            <div class="col-span-3">法人別</div>
+            <div class="col-span-6 flex justify-between px-1">
+              <span>賣超 (-1,000億)</span>
+              <span>0</span>
+              <span>買超 (+1,000億)</span>
+            </div>
+            <div class="col-span-3 text-right">買賣超金額</div>
+          </div>
+          ${rowsHtml}
+        </div>
+      `;
+    }
+
+    function renderLineChart() {
+      const c = getColors();
+      const container = document.getElementById('line-chart-container');
+      const width = 560;
+      const height = 180;
+      const padLeft = 52;
+      const padRight = 20;
+      const padTop = 24;
+      const padBottom = 28;
+
+      const minVal = 84000;
+      const maxVal = 100000;
+      const plotW = width - padLeft - padRight;
+      const plotH = height - padTop - padBottom;
+
+      const points = futuresTrendData.map((d, i) => {
+        const x = padLeft + (i / (futuresTrendData.length - 1)) * plotW;
+        const y = padTop + (1 - (d.shortMag - minVal) / (maxVal - minVal)) * plotH;
+        return { x, y, ...d };
+      });
+
+      const polylinePoints = points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+      const areaPoints = `${points[0].x.toFixed(1)},${(padTop + plotH).toFixed(1)} ` + polylinePoints + ` ${points[points.length - 1].x.toFixed(1)},${(padTop + plotH).toFixed(1)}`;
+
+      const yTicks = [85000, 90000, 95000, 100000];
+      const gridHtml = yTicks.map(val => {
+        const y = padTop + (1 - (val - minVal) / (maxVal - minVal)) * plotH;
+        return `
+          <line x1="${padLeft}" y1="${y}" x2="${width - padRight}" y2="${y}" stroke="var(--border)" stroke-dasharray="3,3" stroke-width="1" />
+          <text x="${padLeft - 6}" y="${y + 4}" text-anchor="end" fill="var(--muted-foreground)" font-size="11">-${(val / 1000).toFixed(0)}k</text>
+        `;
+      }).join('');
+
+      const nodesHtml = points.map((p, idx) => {
+        const isPeak = idx === 2;
+        const isLatest = idx === points.length - 1;
+        const dotColor = isPeak ? c.downText : (isLatest ? c.upText : 'var(--primary)');
+        return `
+          <g>
+            <circle cx="${p.x}" cy="${p.y}" r="${isPeak || isLatest ? 5 : 3.5}" fill="${dotColor}" stroke="var(--card)" stroke-width="2" />
+            <text x="${p.x}" y="${p.y - 8}" text-anchor="middle" fill="var(--foreground)" font-size="11" font-weight="${isPeak || isLatest ? '700' : '500'}">
+              ${p.netOI.toLocaleString()}
+            </text>
+            <text x="${p.x}" y="${height - 8}" text-anchor="middle" fill="var(--muted-foreground)" font-size="11">
+              ${p.date}
+            </text>
+          </g>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto overflow-visible num-font">
+          <defs>
+            <linearGradient id="oiGrad2" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--primary)" stop-opacity="0.25" />
+              <stop offset="100%" stop-color="var(--primary)" stop-opacity="0.0" />
+            </linearGradient>
+          </defs>
+          ${gridHtml}
+          <polygon points="${areaPoints}" fill="url(#oiGrad2)" />
+          <polyline fill="none" stroke="var(--primary)" stroke-width="2" points="${polylinePoints}" />
+          ${nodesHtml}
+        </svg>
+      `;
+    }
+
+    // Sparkline Generator for Table
+    function generateSparkline(history, isUp) {
+      const c = getColors();
+      const lineColor = isUp ? c.upText : c.downText;
+      const min = Math.min(...history);
+      const max = Math.max(...history);
+      const w = 84;
+      const h = 24;
+      const pad = 3;
+
+      const pts = history.map((val, i) => {
+        const x = pad + (i / (history.length - 1)) * (w - 2 * pad);
+        const y = max === min ? h / 2 : pad + (1 - (val - min) / (max - min)) * (h - 2 * pad);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+
+      return `
+        <svg width="${w}" height="${h}" class="inline-block">
+          <polyline fill="none" stroke="${lineColor}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" points="${pts}" />
+          <circle cx="${pts.split(' ').pop().split(',')[0]}" cy="${pts.split(' ').pop().split(',')[1]}" r="2.5" fill="${lineColor}" />
+        </svg>
+      `;
+    }
+
+    function renderTable() {
+      const c = getColors();
+      const tbody = document.getElementById('stock-table-body');
+      
+      let list = [...stockData];
+
+      // 1. Filter
+      if (currentFilter === 'custom') {
+        list = list.filter(s => s.isCustom);
+      } else if (currentFilter === 'tw_core') {
+        list = list.filter(s => s.category === 'tw_core');
+      } else if (currentFilter === 'us') {
+        list = list.filter(s => s.category === 'us');
+      }
+
+      // 2. Search
+      if (currentSearch.trim()) {
+        const q = currentSearch.toLowerCase().trim();
+        list = list.filter(s => 
+          s.code.toLowerCase().includes(q) || 
+          s.name.toLowerCase().includes(q) || 
+          s.badge.toLowerCase().includes(q) ||
+          s.reason.toLowerCase().includes(q)
+        );
+      }
+
+      // 3. Sort
+      list.sort((a, b) => {
+        let valA, valB;
+        if (sortColumn === 'close') {
+          valA = a.closeNum;
+          valB = b.closeNum;
+        } else if (sortColumn === 'changePct') {
+          valA = a.changePctNum;
+          valB = b.changePctNum;
+        } else {
+          valA = a.code;
+          valB = b.code;
+        }
+
+        if (sortDirection === 'asc') {
+          return valA > valB ? 1 : -1;
+        } else {
+          return valA < valB ? 1 : -1;
+        }
+      });
+
+      if (list.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="py-8 text-center text-xs text-[var(--muted-foreground)]">
+              無符合「${currentSearch}」的股票標的，請嘗試其他關鍵字。
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = list.map(s => {
+        const isUp = s.trend === 'up';
+        const badgeColor = isUp ? c.upText : c.downText;
+        const badgeBg = isUp ? c.upBg : c.downBg;
+        const badgeBorder = isUp ? c.upBorder : c.downBorder;
+        const arrow = isUp ? '▲' : '▼';
+        const sparkSvg = generateSparkline(s.history, isUp);
+
+        return `
+          <tr class="hover:bg-[var(--background)] transition-colors">
+            <td class="py-3 px-3 whitespace-nowrap">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--border)]">
+                  ${s.badge}
+                </span>
+                <div>
+                  <div class="font-bold text-[var(--foreground)]">${s.code} ${s.name}</div>
+                </div>
+              </div>
+            </td>
+            <td class="py-3 px-3 text-right font-bold whitespace-nowrap text-[var(--foreground)] num-font">
+              ${s.close}
+            </td>
+            <td class="py-3 px-3 text-right whitespace-nowrap num-font">
+              <span style="color: ${badgeColor}; background-color: ${badgeBg}; border: 1px solid ${badgeBorder};" class="inline-block px-2 py-0.5 rounded text-xs font-bold">
+                ${arrow} ${s.changePct} (${s.changeVal})
+              </span>
+            </td>
+            <td class="py-3 px-3 text-center whitespace-nowrap">
+              ${sparkSvg}
+            </td>
+            <td class="py-3 px-3 text-xs text-[var(--foreground)] font-medium">
+              ${s.flow}
+            </td>
+            <td class="py-3 px-3 text-xs text-[var(--muted-foreground)] leading-relaxed max-w-sm">
+              ${s.reason}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function filterTable(filter) {
+      currentFilter = filter;
+      ['all', 'custom', 'tw_core', 'us'].forEach(key => {
+        const btn = document.getElementById(`filter-${key}`);
+        if (key === filter) {
+          btn.className = 'px-2.5 py-1 rounded text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] shadow-xs';
+        } else {
+          btn.className = 'px-2.5 py-1 rounded text-xs font-semibold text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
+        }
+      });
+      renderTable();
+    }
+
+    function handleSearch(val) {
+      currentSearch = val;
+      renderTable();
+    }
+
+    function sortTable(col) {
+      if (sortColumn === col) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortColumn = col;
+        sortDirection = 'desc';
+      }
+
+      ['name', 'close', 'changePct'].forEach(k => {
+        const icon = document.getElementById(`sort-icon-${k}`);
+        if (k === sortColumn) {
+          icon.textContent = sortDirection === 'asc' ? '↑' : '↓';
+          icon.className = 'text-[var(--foreground)] font-bold';
+        } else {
+          icon.textContent = '↕';
+          icon.className = 'text-[var(--muted-foreground)]';
+        }
+      });
+
+      renderTable();
+    }
+
+    function selectScenario(scen) {
+      currentScenario = scen;
+      ['base', 'bull', 'bear'].forEach(key => {
+        const btn = document.getElementById(`scen-${key}`);
+        if (key === scen) {
+          btn.className = 'py-1.5 px-2 rounded text-xs font-bold bg-[var(--primary)] text-[var(--primary-foreground)] shadow-xs';
+        } else {
+          btn.className = 'py-1.5 px-2 rounded text-xs font-bold text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
+        }
+      });
+
+      const data = scenarios[scen];
+      const card = document.getElementById('scenario-card');
+      card.innerHTML = `
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <span class="text-xs font-bold text-[var(--foreground)]">${data.title}</span>
+          <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--border)]">
+            ${data.prob}
+          </span>
+        </div>
+        <div class="text-xs font-semibold text-[var(--primary)] num-font">
+          ${data.range}
+        </div>
+        <p class="text-xs text-[var(--muted-foreground)] leading-relaxed">
+          ${data.summary}
+        </p>
+        <div class="p-2.5 rounded bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--foreground)]">
+          ${data.action}
+        </div>
+      `;
+    }
+
+    // Module C-2: Position Calculator Logic
+    function initStockCalculator() {
+      const sel = document.getElementById('calc-stock-select');
+      const twList = stockData.filter(s => s.category !== 'us');
+      sel.innerHTML = twList.map(s => `
+        <option value="${s.code}" data-price="${s.closeNum}">
+          ${s.code} ${s.name} (昨收 ${s.closeNum} 元)
+        </option>
+      `).join('');
+
+      autoFillCurrentPrice();
+    }
+
+    function autoFillCurrentPrice() {
+      const sel = document.getElementById('calc-stock-select');
+      const opt = sel.options[sel.selectedIndex];
+      const price = parseFloat(opt.getAttribute('data-price')) || 100;
+      document.getElementById('calc-current').value = price;
+      document.getElementById('calc-cost').value = (price * 0.98).toFixed(1);
+      calculatePosition();
+    }
+
+    function calculatePosition() {
+      const cost = parseFloat(document.getElementById('calc-cost').value) || 0;
+      const shares = parseFloat(document.getElementById('calc-shares').value) || 0;
+      const current = parseFloat(document.getElementById('calc-current').value) || 0;
+
+      const pnl = (current - cost) * shares;
+      const pnlPct = cost > 0 ? ((current - cost) / cost) * 100 : 0;
+
+      const resPnl = document.getElementById('res-pnl');
+      const sign = pnl >= 0 ? '+' : '';
+      resPnl.textContent = `${sign}${pnl.toLocaleString('zh-TW', { maximumFractionDigits: 0 })} 元 (${sign}${pnlPct.toFixed(2)}%)`;
+      
+      const c = getColors();
+      resPnl.style.color = pnl >= 0 ? c.upText : c.downText;
+
+      // Stop Loss (-5%) & Take Profit (+10%)
+      document.getElementById('res-stop-loss').textContent = `${(cost * 0.95).toFixed(1)} 元`;
+      document.getElementById('res-take-profit').textContent = `${(cost * 1.10).toFixed(1)} 元`;
+    }
+
+    // Module C-3: Copy Morning Briefing Text
+    function copyMorningBriefing() {
+      const text = `【晨間台美市場速覽 - 操盤必讀】
+📅 基準日：2026/10/20 盤後 + 10/21 盤前
+-----------------------------
+📊 核心市場總結：
+• 費城半導體：11,283.81 (-0.29%)
+• 台積電 ADR：$425.08 (+1.16%)
+• 台指夜盤收：46,410 (+117 點 / 轉正價差 +117 點)
+• 台股大盤：46,292.93 (-529 點 / 成交 7,587 億)
+-----------------------------
+🎯 籌碼與衍生品解碼：
+• 外資期貨淨空單：-89,748 口 (連 3 日回補，大減 7,834 口空單)
+• 三大法人現貨：外資 -795.4 億 (連 10 賣) / 投信 +183.1 億 (連 14 買)
+• 選擇權最大痛點 (Max Pain)：46,500 點
+• 關鍵防守支撐：46,000 點 (賣權最大未平倉 3.1 萬口)
+-----------------------------
+🔥 自選關鍵個股亮點：
+• 毅嘉 (2402)：逆勢大漲 +1.69% 創高收 60.1 元，車載軟板出貨放量
+• 順達 (3211)：收 342.5 元僅微跌 0.15%，BBU 電池題材資金鎖碼
+• 台積電 (2330)：收 2,405 元守平盤，夜盤與 ADR 溢價帶動早盤攻高
+• 欣興 (3037)：回測 1,055 元千元關卡，密切關注買盤承接力道
+-----------------------------
+💡 今日盤勢模擬 (55% 機率)：
+早盤台積開高引領指數反彈 +150~200 點，區間 46,250~46,650 點。不盲目追高，鎖定守穩均線之 AI 電源與高息封測股！`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        const btnText = document.getElementById('copy-btn-text');
+        btnText.textContent = '已成功複製！';
+        setTimeout(() => {
+          btnText.textContent = '複製 LINE 晨報';
+        }, 2200);
+      });
+    }
+
+    function setColorScheme(scheme) {
+      currentColorScheme = scheme;
+      applyThemeColors();
+      renderBarChart();
+      renderLineChart();
+      renderTable();
+      calculatePosition();
+    }
+
+    // Initialize Dashboard
+    setColorScheme('tw');
+    selectScenario('base');
+    initStockCalculator();
+  </script>
+</body>
+</html>

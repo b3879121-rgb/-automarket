@@ -1,0 +1,12 @@
+# 執行時產生的快取與紀錄
+cache/
+logs/
+__pycache__/
+*.pyc
+*.tmp
+*.bin
+
+# 系統檔
+Thumbs.db
+desktop.ini
+.DS_Store

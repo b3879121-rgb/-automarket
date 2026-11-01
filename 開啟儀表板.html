@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>台股盤後儀表板</title>
+<style>
+  body { font: 16px/1.6 "Microsoft JhengHei", system-ui, sans-serif; margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0f1630; color: #e8ecf5; }
+  .box { max-width: 520px; padding: 28px; border-radius: 16px; background: #18213f; border: 1px solid #2a3560; }
+  a { color: #8fb0ff; } code { background: #0d1328; padding: 2px 6px; border-radius: 6px; }
+  #fallback { display: none; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div id="wait">正在開啟儀表板……</div>
+  <div id="fallback">
+    <b>儀表板伺服器沒有在執行</b>
+    <p>可以先看<a href="reports/latest.html">唯讀版儀表板</a>（不能新增或刪除自選股）。</p>
+    <p>要使用完整功能，請雙擊資料夾裡的 <code>啟動儀表板伺服器.bat</code>。之後每次開機登入都會自動啟動。</p>
+  </div>
+</div>
+<script>
+  // 有伺服器就開可編輯版，沒有就顯示說明
+  const go = () => { location.href = "http://127.0.0.1:8765/"; };
+  fetch("http://127.0.0.1:8765/api/ping", { cache: "no-store" })
+    .then((r) => r.ok ? go() : Promise.reject())
+    .catch(() => { document.getElementById("wait").style.display = "none"; document.getElementById("fallback").style.display = "block"; });
+</script>
+</body>
+</html>
