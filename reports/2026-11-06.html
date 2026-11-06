@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>台股盤後儀表板</title>
+<style>
+:root {
+  --bg: #f4f5f7; --card: #ffffff; --card2: #f8f9fb; --border: #e2e5ea;
+  --text: #14171c; --text2: #485160; --muted: #7a8392; --accent: #2f5fd0;
+  --c1: #3a6fd8; --c2: #d07a1f; --grid: #eceef2;
+  --red: #d42f39; --green: #12875a;
+  --shadow: 0 1px 2px rgba(16,24,40,.05);
+}
+:root[data-theme="dark"] {
+  --bg: #0d1015; --card: #151a21; --card2: #1b2129; --border: #28303b;
+  --text: #e9ecf1; --text2: #b3bcc9; --muted: #808b9b; --accent: #7aa0ff;
+  --c1: #5b8af0; --c2: #c97f28; --grid: #222932;
+  --red: #ff5a63; --green: #2fbf7c;
+  --shadow: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1015; --card: #151a21; --card2: #1b2129; --border: #28303b;
+    --text: #e9ecf1; --text2: #b3bcc9; --muted: #808b9b; --accent: #7aa0ff;
+    --c1: #5b8af0; --c2: #c97f28; --grid: #222932;
+    --red: #ff5a63; --green: #2fbf7c;
+    --shadow: none;
+  }
+}
+/* 漲跌顏色：台股紅漲綠跌（預設），可切換成國際綠漲紅跌 */
+:root { --up: var(--red); --down: var(--green); }
+:root[data-updown="us"] { --up: var(--green); --down: var(--red); }
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.55 "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+}
+.num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 20px 16px 48px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); min-width: 0; }
+h1 { font-size: 22px; margin: 0; letter-spacing: .01em; }
+h2 { font-size: 16px; margin: 0; }
+.sub { color: var(--muted); font-size: 13px; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.between { justify-content: space-between; }
+.up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--text2); }
+.btn, select, input {
+  font: inherit; font-size: 14px; color: var(--text); background: var(--card2);
+  border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
+}
+.btn { cursor: pointer; font-weight: 600; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button { font: inherit; font-size: 13px; border: 0; background: var(--card2); color: var(--text2); padding: 6px 10px; cursor: pointer; }
+.seg button.on { background: var(--accent); color: #fff; font-weight: 600; }
+input:focus, select:focus, .btn:focus-visible, .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* 頂部 */
+.top { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; align-items: center; }
+.status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--card2); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+.status.warn .dot { background: #d9a400; }
+
+/* 重點摘要 + 關鍵價位 */
+.hero { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; }
+.headline { font-size: 19px; font-weight: 700; margin: 6px 0 12px; line-height: 1.5; }
+.bullets { margin: 0; padding-left: 20px; color: var(--text2); display: grid; gap: 6px; }
+.ladder { display: grid; gap: 6px; margin-top: 10px; }
+.lv { display: grid; grid-template-columns: 92px 1fr auto; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; background: var(--card2); border: 1px solid var(--border); font-size: 14px; }
+.lv b { font-size: 15px; }
+.lv .tag { font-size: 12px; color: var(--muted); }
+.lv.price { border-color: var(--accent); }
+.lv.res b { color: var(--text); } .lv .bar { height: 6px; border-radius: 3px; background: var(--grid); position: relative; }
+.lv .bar i { position: absolute; top: -3px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--card); transform: translateX(-50%); }
+
+/* KPI */
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.kpi .label { font-size: 13px; color: var(--muted); font-weight: 600; }
+.kpi .big { font-size: 26px; font-weight: 700; margin: 4px 0 2px; letter-spacing: -.01em; }
+.kpi .chg { font-weight: 700; font-size: 15px; }
+.kpi .foot { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text2); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+
+/* 圖表 */
+.charts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.chart { position: relative; width: 100%; margin-top: 10px; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.legend { display: flex; gap: 14px; font-size: 13px; color: var(--text2); flex-wrap: wrap; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.legend i.line { height: 3px; border-radius: 2px; }
+.axis text { fill: var(--muted); font-size: 11px; }
+.tip { position: fixed; pointer-events: none; z-index: 20; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,.18); display: none; min-width: 140px; }
+.tip .t { font-weight: 700; margin-bottom: 4px; }
+.tip .r { display: flex; justify-content: space-between; gap: 14px; }
+.tip .r span:first-child { color: var(--text2); }
+.empty { color: var(--muted); font-size: 14px; padding: 24px 0; text-align: center; }
+
+/* 自選股 */
+.tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.tbl-wrap { overflow-x: auto; margin-top: 12px; border: 1px solid var(--border); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { position: sticky; top: 0; background: var(--card2); color: var(--text2); font-weight: 600; font-size: 13px; text-align: right; padding: 10px; white-space: nowrap; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; }
+th:last-child { text-align: left; }
+th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: inherit; z-index: 1; }
+th:first-child { background: var(--card2); z-index: 2; }
+td { padding: 10px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
+tbody tr { background: var(--card); }
+tbody tr:hover { background: var(--card2); }
+tbody tr:last-child td { border-bottom: 0; }
+td.l { text-align: left; white-space: normal; }
+.name b { font-size: 15px; } .name .g { display: block; font-size: 12px; color: var(--muted); }
+.pill { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--card2); color: var(--text2); margin: 2px 4px 2px 0; white-space: nowrap; }
+.pill.up { color: var(--up); border-color: color-mix(in srgb, var(--up) 40%, transparent); background: color-mix(in srgb, var(--up) 10%, transparent); }
+.pill.down { color: var(--down); border-color: color-mix(in srgb, var(--down) 40%, transparent); background: color-mix(in srgb, var(--down) 10%, transparent); }
+.streak { display: block; font-size: 12px; color: var(--muted); }
+.cards { display: none; }
+
+/* 工具區 */
+.duo { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; }
+.check { display: grid; gap: 8px; margin-top: 12px; }
+.check label { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: var(--card2); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 14px; }
+.check input { margin-top: 4px; width: 16px; height: 16px; accent-color: var(--accent); }
+.check .done { color: var(--muted); text-decoration: line-through; }
+.check .x { margin-left: auto; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 16px; }
+.form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.form label { font-size: 13px; color: var(--text2); display: grid; gap: 4px; }
+.form .full { grid-column: 1 / -1; }
+.form input, .form select { width: 100%; }
+.result { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.result div { background: var(--card2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+.result span { display: block; font-size: 12px; color: var(--muted); }
+.result b { font-size: 17px; }
+.result .wide { grid-column: 1 / -1; }
+footer { color: var(--muted); font-size: 12px; line-height: 1.7; }
+
+@media (max-width: 1000px) {
+  .hero, .charts, .duo { grid-template-columns: minmax(0, 1fr); }
+  .kpis { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 640px) {
+  .kpis { grid-template-columns: minmax(0, 1fr); }
+  .kpi .big { font-size: 24px; }
+  .lv { grid-template-columns: 84px minmax(0, 1fr); }
+  .lv .bar { display: none; }
+  .headline { font-size: 17px; }
+  .tbl-wrap { display: none; }
+  .cards { display: grid; gap: 10px; margin-top: 12px; }
+  .scard { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--card2); }
+  .scard .row1 { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .scard .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 13px; color: var(--text2); margin-top: 8px; }
+  .form, .result { grid-template-columns: 1fr; }
+}
+@media print { .btn, .seg, .tools, .check .x { display: none !important; } body { background: #fff; } }
+
+/* ═════════ 華麗版視覺 ═════════ */
+:root { --hi-up: #ff6b72; --hi-down: #3ee08f; --radius: 16px; }
+:root[data-updown="us"] { --hi-up: #3ee08f; --hi-down: #ff6b72; }
+body {
+  background:
+    radial-gradient(1200px 500px at 10% -10%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, color-mix(in srgb, #9b5cff 12%, transparent), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+}
+.card { border-radius: var(--radius); transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px -12px rgba(30, 50, 120, .28); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+h2 { display: flex; align-items: center; gap: 8px; }
+h2::before { content: ""; width: 4px; height: 16px; border-radius: 2px; background: linear-gradient(180deg, var(--accent), #9b5cff); }
+
+/* 跑馬燈 */
+.ticker {
+  display: flex; align-items: center; gap: 14px; overflow: hidden;
+  background: linear-gradient(90deg, #0a0f1f, #111a33 50%, #0a0f1f); color: #dfe6f5;
+  border: 1px solid #1f2a47; border-radius: 12px; padding: 9px 14px; font-size: 14px;
+  box-shadow: 0 6px 24px -10px rgba(10, 20, 60, .6);
+}
+.ticker .badge { flex: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 800; letter-spacing: .06em; font-size: 12px; color: #fff; padding: 4px 10px; border-radius: 999px; background: linear-gradient(90deg, #2f5fd0, #7b4dff); }
+.ticker .badge i { width: 8px; height: 8px; border-radius: 50%; background: #3ee08f; box-shadow: 0 0 0 0 rgba(62,224,143,.7); animation: pulse 1.8s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(62,224,143,.6); } 70% { box-shadow: 0 0 0 8px rgba(62,224,143,0); } 100% { box-shadow: 0 0 0 0 rgba(62,224,143,0); } }
+.ticker .track { flex: 1; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
+.ticker .belt { display: inline-flex; white-space: nowrap; animation: belt var(--dur, 60s) linear infinite; }
+.ticker:hover .belt { animation-play-state: paused; }
+.ticker .dup { display: contents; }
+@keyframes belt { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.ticker .it { display: inline-flex; align-items: baseline; gap: 7px; padding: 0 18px; position: relative; }
+.ticker .it + .it::before { content: "•"; position: absolute; left: -3px; color: #4a5678; }
+.ticker .it .n { color: #9fb0d4; }
+.ticker .it b { color: #fff; font-weight: 700; }
+.ticker .it .u { color: var(--hi-up); font-weight: 700; }
+.ticker .it .d { color: var(--hi-down); font-weight: 700; }
+.ticker .it .note { color: #8494b8; font-size: 12px; }
+.ticker .when { flex: none; font-size: 12px; color: #8494b8; }
+/* 系統關閉動畫效果時，跑馬燈改成較慢的速度（仍可滑鼠移上去暫停） */
+@media (prefers-reduced-motion: reduce) { .ticker .belt { animation-duration: calc(var(--dur, 60s) * 1.6); } }
+
+/* 漸層橫幅 */
+.banner {
+  position: relative; overflow: hidden; border-radius: 20px; padding: 24px 24px 22px; color: #fff;
+  background:
+    radial-gradient(600px 300px at 85% 10%, rgba(255,255,255,.16), transparent 60%),
+    radial-gradient(500px 280px at 0% 100%, rgba(80,200,255,.22), transparent 60%),
+    linear-gradient(135deg, #172a73 0%, #3b2a94 48%, #0d5f93 100%);
+  box-shadow: 0 18px 40px -18px rgba(40, 40, 140, .55);
+}
+.banner::after { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px); background-size: 32px 32px; mask-image: linear-gradient(180deg, rgba(0,0,0,.6), transparent 80%); pointer-events: none; }
+.banner > * { position: relative; z-index: 1; }
+.banner .eyebrow { font-size: 12px; letter-spacing: .18em; font-weight: 700; color: rgba(255,255,255,.7); }
+.banner h1 { font-size: 26px; margin-top: 2px; }
+.banner .meta { color: rgba(255,255,255,.75); font-size: 13px; margin-top: 2px; }
+.banner .status { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.25); color: #fff; }
+.banner select, .banner .seg { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.28); color: #fff; }
+.banner select option { color: #111; }
+.banner .seg button { background: transparent; color: rgba(255,255,255,.85); }
+.banner .seg button.on { background: #fff; color: #23307a; }
+.banner .btn.primary { background: linear-gradient(90deg, #ffb547, #ff7a59); border: 0; color: #2a1606; box-shadow: 0 6px 18px -6px rgba(255,130,80,.7); }
+.banner-main { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: end; margin-top: 22px; }
+.big-index .label { font-size: 13px; color: rgba(255,255,255,.75); font-weight: 600; }
+.big-index .value { font-size: 48px; font-weight: 800; line-height: 1.05; letter-spacing: -.02em; text-shadow: 0 4px 24px rgba(0,0,0,.25); }
+.big-index .chg { display: inline-flex; gap: 8px; margin-top: 8px; font-weight: 700; font-size: 16px; padding: 4px 12px; border-radius: 999px; background: rgba(0,0,0,.22); }
+.big-index .chg.u { color: var(--hi-up); } .big-index .chg.d { color: var(--hi-down); }
+.banner .headline { margin: 0; font-size: 17px; font-weight: 600; color: rgba(255,255,255,.92); padding: 14px 16px; border-radius: 14px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); backdrop-filter: blur(6px); }
+
+/* KPI 卡 */
+.kpi { position: relative; overflow: hidden; padding-top: 20px; }
+.kpi::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: var(--k, var(--accent)); }
+.kpi.k-up { --k: linear-gradient(90deg, var(--up), color-mix(in srgb, var(--up) 40%, #ffb547)); }
+.kpi.k-down { --k: linear-gradient(90deg, var(--down), color-mix(in srgb, var(--down) 40%, #37c3ff)); }
+.kpi .big { font-size: 30px; }
+.kpi .ks { margin: 8px -4px 0; height: 44px; }
+.kpi .ks svg { width: 100%; height: 44px; display: block; }
+
+/* 進場動畫 */
+@media (prefers-reduced-motion: no-preference) {
+  .wrap > * { animation: rise .5s ease both; }
+  .wrap > *:nth-child(2) { animation-delay: .05s; } .wrap > *:nth-child(3) { animation-delay: .1s; }
+  .wrap > *:nth-child(4) { animation-delay: .15s; } .wrap > *:nth-child(5) { animation-delay: .2s; }
+  .wrap > *:nth-child(n+6) { animation-delay: .25s; }
+}
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* 表格與價位 */
+thead th { background: linear-gradient(180deg, var(--card2), color-mix(in srgb, var(--card2) 70%, var(--accent) 6%)); }
+tbody tr:nth-child(even) { background: color-mix(in srgb, var(--card2) 55%, var(--card)); }
+.lv { transition: transform .15s ease; }
+.lv:hover { transform: translateX(3px); }
+.lv.price { background: color-mix(in srgb, var(--accent) 8%, var(--card2)); }
+
+/* 自選股管理 */
+.adder { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; padding: 12px; border-radius: 12px; border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--border)); background: color-mix(in srgb, var(--accent) 5%, var(--card)); }
+.adder .ac { position: relative; flex: 1; min-width: 220px; }
+.adder .ac input { width: 100%; padding: 9px 12px; font-size: 15px; }
+.ac-list { position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 4px); background: var(--card); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 30px -10px rgba(0,0,0,.3); overflow: hidden; display: none; }
+.ac-list.open { display: block; }
+.ac-list button { display: flex; width: 100%; justify-content: space-between; gap: 10px; padding: 9px 12px; border: 0; background: none; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.ac-list button:hover, .ac-list button.on { background: color-mix(in srgb, var(--accent) 12%, var(--card)); }
+.ac-list button[disabled] { color: var(--muted); cursor: default; }
+.ac-list .m { color: var(--muted); font-size: 12px; }
+.adder .btn.primary { padding: 9px 16px; }
+.del { margin-left: 6px; border: 0; background: none; color: var(--muted); font-size: 16px; line-height: 1; cursor: pointer; padding: 2px 6px; border-radius: 6px; opacity: .55; }
+.del:hover { opacity: 1; color: var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); }
+.del.armed { opacity: 1; color: #fff; background: var(--red); font-size: 12px; font-weight: 700; padding: 3px 8px; }
+tr.busy, .scard.busy { opacity: .4; pointer-events: none; }
+tr.flash td { animation: flash 1.6s ease; }
+@keyframes flash { from { background: color-mix(in srgb, var(--accent) 22%, transparent); } to { background: transparent; } }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); z-index: 50; background: #111827; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.3); opacity: 0; transition: .25s ease; pointer-events: none; max-width: calc(100vw - 32px); }
+.toast.show { opacity: 1; transform: translateX(-50%); pointer-events: auto; }
+.toast.err { background: #b42318; }
+.toast a { color: #ffd27a; margin-left: 8px; }
+.readonly { margin-top: 12px; font-size: 13px; color: var(--muted); padding: 10px 12px; border-radius: 10px; background: var(--card2); border: 1px solid var(--border); }
+
+/* 法人買賣超排行 */
+.rank-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 14px; }
+.rank-h { font-weight: 800; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.rank-h::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: currentColor; }
+.rk { position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto 30px; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; overflow: hidden; }
+.rk + .rk { margin-top: 4px; }
+.rk::before { content: ""; position: absolute; inset: 0; width: var(--w); background: var(--bar); opacity: .11; border-radius: 10px; z-index: 0; }
+.rk > * { position: relative; z-index: 1; }
+.rk:hover { background: var(--card2); }
+.rk .no { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--card2); border: 1px solid var(--border); color: var(--text2); }
+.rk:nth-child(-n+3) .no { background: linear-gradient(135deg, #ffcf5a, #f59e0b); color: #3b2300; border: 0; }
+.rk .nm b { font-size: 14px; } .rk .nm .g { display: block; font-size: 12px; color: var(--muted); }
+.rk .val { text-align: right; } .rk .val b { font-size: 15px; } .rk .val span { display: block; font-size: 12px; color: var(--muted); }
+.rk .add { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--accent); font-size: 16px; font-weight: 700; cursor: pointer; }
+.rk .add:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.rk .held { font-size: 14px; color: #f5a524; text-align: center; }
+.tagx { font-size: 11px; padding: 0 5px; border-radius: 4px; border: 1px solid var(--border); margin-left: 4px; color: var(--text2); }
+@media (max-width: 1000px) { .rank-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* 美日台融資 */
+.margin-wrap .mg-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.mg { position: relative; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; padding: 16px; background: var(--card2); }
+.mg::after { content: attr(data-flag); position: absolute; right: -6px; top: -14px; font-size: 64px; font-weight: 900; letter-spacing: -.04em; color: var(--text); opacity: .05; pointer-events: none; }
+.mg-head { display: flex; align-items: center; gap: 10px; }
+.flag { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-weight: 800; font-size: 12px; color: #fff; letter-spacing: .04em; }
+.flag.tw { background: linear-gradient(135deg, #1d4ed8, #dc2626); }
+.flag.us { background: linear-gradient(135deg, #1e3a8a, #b91c1c 70%, #f8fafc); }
+.flag.jp { background: radial-gradient(circle at 50% 50%, #dc2626 0 38%, #f1f5f9 40%); color: #111; }
+.mg .big { font-size: 26px; font-weight: 800; margin-top: 12px; letter-spacing: -.01em; }
+.mg .chg { font-size: 14px; font-weight: 600; margin-top: 2px; }
+.mg .ks { margin: 10px -2px 0; }
+.mg .facts { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); display: grid; gap: 6px; font-size: 13px; color: var(--text2); }
+.mg .facts div { display: flex; justify-content: space-between; gap: 10px; }
+.gauge { position: relative; height: 8px; border-radius: 4px; margin: 8px 0 18px; background: linear-gradient(90deg, #e5484d 0%, #f5a524 18%, #46a758 45%, #46a758 70%, #f5a524 100%); }
+.gauge i { position: absolute; top: -4px; width: 4px; height: 16px; border-radius: 2px; background: var(--text); transform: translateX(-50%); box-shadow: 0 0 0 2px var(--card2); }
+.gauge span { position: absolute; top: 12px; font-size: 11px; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
+@media (max-width: 1000px) { .margin-wrap .mg-grid { grid-template-columns: minmax(0, 1fr); } }
+
+@media (max-width: 1000px) { .banner-main { grid-template-columns: minmax(0, 1fr); gap: 14px; } }
+@media (max-width: 640px) {
+  .banner { padding: 18px 16px; border-radius: 16px; }
+  .banner h1 { font-size: 22px; }
+  .big-index .value { font-size: 38px; }
+  .ticker { font-size: 13px; padding: 8px 10px; }
+  .ticker .when { display: none; }
+}
+
+/* ═════════ 交易終端外觀（最後定義，覆蓋上面的設定） ═════════ */
+:root:not([data-theme="light"]) {
+  --bg: #0B0E13; --card: #12161D; --card2: #171C25; --border: #232A35;
+  --text: #E6E9EE; --text2: #C9CFD8; --muted: #8B95A5; --accent: #F5B544; --on-accent: #0B0E13;
+  --c1: #5b8af0; --c2: #c97f28; --grid: #1C222C; --red: #FF6B6B; --green: #2BD07F; --shadow: none; --hl: #1B2230;
+}
+:root[data-theme="light"] {
+  --bg: #F4F5F7; --card: #FFFFFF; --card2: #F0F2F5; --border: #DDE1E7;
+  --text: #12161D; --text2: #3F4856; --muted: #687385; --accent: #C9861A; --on-accent: #12161D;
+  --c1: #3a6fd8; --c2: #d07a1f; --grid: #ECEEF2; --red: #D42F39; --green: #12875A; --shadow: none; --hl: #FFF6E5;
+}
+body { background: var(--bg); font-family: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif; }
+.num, .kpi .big, .big-index .value, .mg .big, td.num, .rk .val, .lv2 b { font-family: "JetBrains Mono", "Consolas", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+.wrap { gap: 14px; padding-top: 16px; }
+.card { border-radius: 10px; box-shadow: none; padding: 18px; }
+.card:hover { transform: none; box-shadow: none; border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); }
+h2 { font-size: 15px; }
+h2::before { width: 8px; height: 8px; border-radius: 2px; background: var(--accent); }
+.btn.primary, .seg button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.btn, select, input, .seg { border-radius: 6px; }
+.seg button { min-height: 36px; }
+.btn, select { min-height: 38px; }
+@media (prefers-reduced-motion: no-preference) { .wrap > * { animation-duration: .3s; } }
+
+/* 標題列 */
+.termbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0 12px; border-bottom: 1px solid var(--border); }
+.termbar .brand { display: flex; align-items: center; gap: 12px; }
+.termbar .logo { width: 38px; height: 38px; border-radius: 8px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-weight: 900; font-size: 16px; flex: none; }
+.termbar h1 { font-size: 20px; font-weight: 900; letter-spacing: .02em; }
+.termbar .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.termbar .status { font-size: 12px; padding: 2px 8px; }
+
+/* 跑馬燈 */
+.ticker { background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 8px; box-shadow: none; padding: 8px 12px; font-size: 13px; }
+.ticker .badge { background: none; color: var(--accent); padding: 0; font-size: 12px; letter-spacing: .08em; }
+.ticker .it .n { color: var(--muted); }
+.ticker .it b { color: var(--text); }
+.ticker .it .u { color: var(--up); } .ticker .it .d { color: var(--down); }
+.ticker .it .note, .ticker .when { color: var(--muted); }
+.ticker .it + .it::before { color: var(--border); }
+
+/* 指數區 + 關鍵價位 */
+.hero2 { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 14px; }
+.idx-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.big-index .label { font-size: 12px; color: var(--muted); letter-spacing: .12em; font-weight: 600; }
+.big-index .value { font-size: 52px; font-weight: 700; letter-spacing: -.03em; text-shadow: none; color: var(--text); margin-top: 4px; }
+.big-index .chg { background: none; padding: 0; margin-top: 6px; font-size: 18px; }
+.big-index .chg.u { color: var(--up); } .big-index .chg.d { color: var(--down); }
+.idx-stats { display: grid; grid-template-columns: auto auto; gap: 6px 22px; font-size: 13px; }
+.idx-stats span:nth-child(odd) { color: var(--muted); font-family: "Noto Sans TC", system-ui, sans-serif; }
+.idx-stats span:nth-child(even) { text-align: right; }
+.lv2 { display: grid; grid-template-columns: 82px minmax(0, 1fr) 64px; gap: 10px; align-items: center; padding: 9px 8px; border-bottom: 1px solid var(--border); font-size: 14px; }
+.lv2:last-child { border-bottom: 0; }
+.lv2 span small { display: block; font-size: 12px; color: var(--muted); }
+.lv2 .pct { text-align: right; color: var(--muted); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; }
+.lv2.price { background: var(--hl); border-radius: 6px; border-bottom-color: transparent; }
+.lv2.price b { color: var(--accent); }
+.lv2.res b::after, .lv2.sup b::after { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-left: 6px; vertical-align: middle; }
+.lv2.res b::after { background: var(--c2); } .lv2.sup b::after { background: var(--c1); }
+.ladder { gap: 0; margin-top: 8px; }
+.headline { font-size: 17px; font-weight: 700; margin: 10px 0 12px; }
+
+/* 指標卡、表格 */
+.kpi::before { height: 3px; }
+.kpi.k-up { --k: var(--up); } .kpi.k-down { --k: var(--down); }
+.kpi .big { font-size: 28px; }
+.charts { grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 14px; }
+thead th { background: var(--card2); }
+tbody tr:nth-child(even) { background: var(--card); }
+.mg { border-radius: 10px; }
+.mg::after { opacity: .04; }
+.adder { border-style: solid; border-color: var(--border); background: var(--card2); border-radius: 10px; }
+.rk:nth-child(-n+3) .no { background: var(--accent); color: var(--on-accent); }
+.toast { background: var(--card2); color: var(--text); border: 1px solid var(--border); }
+
+[hidden] { display: none !important; }
+.charts { grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); }
+.charts .wide { grid-column: 1 / -1; }
+@media (max-width: 1000px) { .hero2 { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) {
+  .big-index .value { font-size: 40px; }
+  .termbar h1 { font-size: 18px; }
+  .ticker .when { display: none; }
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;display=swap">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="termbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">台</span>
+      <div>
+        <div class="row" style="gap:10px">
+          <h1>台股盤後終端</h1>
+          <span id="status" class="status"><span class="dot"></span><span id="status-text"></span></span>
+        </div>
+        <div class="meta num" id="meta"></div>
+      </div>
+    </div>
+    <div class="row">
+      <select id="date-select" aria-label="選擇日期" class="num"></select>
+      <div class="seg" role="group" aria-label="漲跌配色">
+        <button data-ud="tw">紅漲綠跌</button><button data-ud="us">綠漲紅跌</button>
+      </div>
+      <div class="seg" role="group" aria-label="主題">
+        <button data-th="dark">深色</button><button data-th="light">淺色</button>
+      </div>
+      <button class="btn primary" id="copy-btn">複製盤後摘要</button>
+    </div>
+  </header>
+
+  <div class="ticker" id="ticker" aria-label="國際市場跑馬燈">
+    <span class="badge"><i></i>LIVE</span>
+    <div class="track"><div class="belt num" id="belt"></div></div>
+    <span class="when" id="ticker-when"></span>
+  </div>
+
+  <section class="hero2">
+    <div class="card idx">
+      <div class="idx-top">
+        <div class="big-index">
+          <div class="label">TAIEX 加權指數</div>
+          <div class="value num" id="b-close"></div>
+          <div class="chg num" id="b-chg"></div>
+        </div>
+        <div class="idx-stats num" id="b-stats"></div>
+      </div>
+      <div class="row between" style="margin-top:14px"><span class="sub">近 60 個交易日</span><div class="legend" id="lg-taiex"></div></div>
+      <div class="chart" id="ch-taiex"></div>
+      <div class="sub" style="margin-top:8px">成交金額（億元）</div>
+      <div class="chart" id="ch-turnover"></div>
+    </div>
+    <div class="card">
+      <div class="row between">
+        <h2>關鍵價位</h2>
+        <span class="sub" id="ladder-note"></span>
+      </div>
+      <div class="ladder" id="ladder"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>今日重點</h2>
+    <p class="headline" id="headline"></p>
+    <ul class="bullets" id="bullets"></ul>
+  </section>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="card margin-wrap" id="margin-sec">
+    <div class="row between">
+      <h2>美日台融資水位</h2>
+      <span class="sub">三地公布頻率不同：台股每日、日股每週、美股每月，各自顯示最近一次公布的數字</span>
+    </div>
+    <div class="mg-grid" id="mg-grid"></div>
+  </section>
+
+  <section class="charts">
+    <div class="card">
+      <div class="row between"><h2>外資、投信現貨買賣超（億元）</h2><div class="legend" id="lg-inst"></div></div>
+      <div class="chart" id="ch-inst"></div>
+    </div>
+    <div class="card">
+      <div class="row between"><h2>外資台指期淨未平倉（口）</h2><span class="sub" id="fut-note"></span></div>
+      <div class="chart" id="ch-futoi"></div>
+    </div>
+    <div class="card wide">
+      <div class="row between"><h2>選擇權未平倉分布（所有未到期合約）</h2><div class="legend" id="lg-opt"></div></div>
+      <div class="chart" id="ch-opt"></div>
+    </div>
+  </section>
+
+  <section class="card" id="rank-sec">
+    <div class="row between">
+      <div>
+        <h2>三大法人買賣超排行</h2>
+        <div class="sub">全市場上市櫃（含 ETF）。金額＝買賣超張數 × 當日收盤價，為估算值。</div>
+      </div>
+      <div class="tools">
+        <div class="seg" id="rank-who"></div>
+        <div class="seg" id="rank-by"></div>
+      </div>
+    </div>
+    <div class="rank-grid">
+      <div><div class="rank-h up">買超前 10 名</div><div id="rank-buy"></div></div>
+      <div><div class="rank-h down">賣超前 10 名</div><div id="rank-sell"></div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row between">
+      <div>
+        <h2>自選股追蹤</h2>
+        <div class="sub">點欄位標題可排序。法人單位：張。量比＝今日量 ÷ 前 5 日均量。月線乖離＝收盤價與 20 日均線的差距。</div>
+      </div>
+      <div class="tools">
+        <input id="search" type="search" placeholder="篩選表格：代號、名稱、族群" aria-label="篩選自選股">
+        <div class="seg" id="filters"></div>
+      </div>
+    </div>
+    <div class="adder" id="adder" hidden>
+      <div class="ac">
+        <input id="add-code" placeholder="新增自選股：輸入代號或名稱，例如 2603 或 長榮" autocomplete="off" aria-label="新增自選股">
+        <div class="ac-list" id="ac-list" role="listbox"></div>
+      </div>
+      <select id="add-tag" aria-label="分類"></select>
+      <button class="btn primary" id="add-btn">＋ 加入自選</button>
+    </div>
+    <div class="readonly" id="readonly" hidden>目前是以檔案方式開啟，只能瀏覽。要在網頁上新增或刪除自選股，請雙擊資料夾裡的「開啟儀表板.html」。</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr id="thead"></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <section class="duo">
+    <div class="card">
+      <div class="row between"><h2>明日觀察清單</h2><span class="sub">依當日資料自動產生，每天更新；勾選狀態存在這台電腦的瀏覽器</span></div>
+      <div class="check" id="checklist"></div>
+      <form class="row" id="add-form" style="margin-top:10px">
+        <input id="add-input" placeholder="新增自己的觀察項目（每天都會出現）" style="flex:1;min-width:200px">
+        <button class="btn" type="submit">新增</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>持股損益與停損試算</h2>
+      <div class="sub">含手續費與證交稅。手續費最低 20 元（零股依各券商規定）。</div>
+      <div class="form">
+        <label class="full">標的<select id="c-stock"></select></label>
+        <label>買進價<input id="c-cost" type="number" step="0.01" inputmode="decimal"></label>
+        <label>股數<input id="c-shares" type="number" step="1" value="1000" inputmode="numeric"></label>
+        <label>目前價<input id="c-now" type="number" step="0.01" inputmode="decimal"></label>
+        <label>手續費折數<input id="c-disc" type="number" step="0.01" value="0.6" min="0" max="1"></label>
+        <label>證交稅<select id="c-tax"><option value="0.003">一般股票 0.3%</option><option value="0.0015">現股當沖 0.15%</option><option value="0.001">ETF 0.1%</option></select></label>
+        <label>停損 %<input id="c-sl" type="number" step="0.5" value="5"></label>
+        <label>停利 %<input id="c-tp" type="number" step="0.5" value="10"></label>
+        <label>可承受單筆虧損（元）<input id="c-risk" type="number" step="1000" value="20000"></label>
+      </div>
+      <div class="result" id="c-result"></div>
+    </div>
+  </section>
+
+  <footer>
+    資料來源：臺灣證券交易所、證券櫃檯買賣中心、臺灣期貨交易所公開資料。
+    「關鍵價位」「訊號」都是依公開數據機械式計算的結果，僅供參考，不構成任何投資建議。
+    <span id="gen"></span>
+  </footer>
+</div>
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script id="report-data" type="application/json">{"date": "2026-11-06", "generated_at": "2026-11-06T16:30:03", "market": {"close": 39701.64, "change": -1873.08, "pct": -4.51, "turnover": 13125.17, "turnover_avg5": 9810.72, "ma20": 46133.96, "ma60": 46415.23, "series": [{"d": "2026-08-10", "close": 44928.76, "change": 702.85, "turnover": 8804.41}, {"d": "2026-08-11", "close": 45120.72, "change": 191.96, "turnover": 9020.52}, {"d": "2026-08-12", "close": 45518.07, "change": 397.35, "turnover": 8926.6}, {"d": "2026-08-13", "close": 46021.48, "change": 503.41, "turnover": 11040.25}, {"d": "2026-08-14", "close": 45811.01, "change": -210.47, "turnover": 11097.47}, {"d": "2026-08-17", "close": 45857.27, "change": 46.26, "turnover": 9810.55}, {"d": "2026-08-18", "close": 45308.68, "change": -548.59, "turnover": 10078.82}, {"d": "2026-08-19", "close": 44719.35, "change": -589.33, "turnover": 8902.7}, {"d": "2026-08-20", "close": 44933.74, "change": 214.39, "turnover": 8344.13}, {"d": "2026-08-21", "close": 45224.29, "change": 290.55, "turnover": 7549.05}, {"d": "2026-08-24", "close": 44762.32, "change": -461.97, "turnover": 6562.81}, {"d": "2026-08-25", "close": 45169.46, "change": 407.14, "turnover": 7242.58}, {"d": "2026-08-26", "close": 45832.62, "change": 663.16, "turnover": 8430.92}, {"d": "2026-08-27", "close": 45975.22, "change": 142.6, "turnover": 9674.66}, {"d": "2026-08-28", "close": 46331.45, "change": 356.23, "turnover": 10689.85}, {"d": "2026-08-31", "close": 46128.47, "change": -202.98, "turnover": 12892.28}, {"d": "2026-09-01", "close": 46948.72, "change": 820.25, "turnover": 11875.72}, {"d": "2026-09-02", "close": 46164.72, "change": -784.0, "turnover": 9765.0}, {"d": "2026-09-03", "close": 45857.66, "change": -307.06, "turnover": 9932.62}, {"d": "2026-09-04", "close": 46551.13, "change": 693.47, "turnover": 8582.45}, {"d": "2026-09-07", "close": 47326.27, "change": 775.14, "turnover": 9979.45}, {"d": "2026-09-08", "close": 47105.78, "change": -220.49, "turnover": 9226.58}, {"d": "2026-09-09", "close": 47183.36, "change": 77.58, "turnover": 8159.77}, {"d": "2026-09-10", "close": 46940.49, "change": -242.87, "turnover": 7507.43}, {"d": "2026-09-11", "close": 46184.85, "change": -755.64, "turnover": 7622.45}, {"d": "2026-09-14", "close": 45862.52, "change": -322.33, "turnover": 6653.16}, {"d": "2026-09-15", "close": 45511.49, "change": -351.03, "turnover": 6347.07}, {"d": "2026-09-16", "close": 45848.9, "change": 337.41, "turnover": 6759.7}, {"d": "2026-09-17", "close": 46288.0, "change": 439.1, "turnover": 8666.19}, {"d": "2026-09-18", "close": 47180.75, "change": 892.75, "turnover": 11423.22}, {"d": "2026-09-21", "close": 47718.84, "change": 538.09, "turnover": 8668.18}, {"d": "2026-09-22", "close": 47800.17, "change": 81.33, "turnover": 10787.76}, {"d": "2026-09-23", "close": 48157.29, "change": 357.12, "turnover": 8946.51}, {"d": "2026-09-24", "close": 48024.6, "change": -132.69, "turnover": 7755.91}, {"d": "2026-09-29", "close": 47631.96, "change": -392.64, "turnover": 8361.45}, {"d": "2026-09-30", "close": 47940.13, "change": 308.17, "turnover": 9214.93}, {"d": "2026-10-01", "close": 48353.49, "change": 413.36, "turnover": 8740.46}, {"d": "2026-10-02", "close": 48475.74, "change": 122.25, "turnover": 9382.22}, {"d": "2026-10-05", "close": 49712.04, "change": 1236.3, "turnover": 12110.41}, {"d": "2026-10-06", "close": 49822.55, "change": 110.51, "turnover": 10262.05}, {"d": "2026-10-07", "close": 49806.37, "change": -16.18, "turnover": 9862.8}, {"d": "2026-10-08", "close": 49313.44, "change": -492.93, "turnover": 9245.09}, {"d": "2026-10-12", "close": 49301.96, "change": -11.48, "turnover": 8945.22}, {"d": "2026-10-13", "close": 48341.31, "change": -960.65, "turnover": 12018.61}, {"d": "2026-10-14", "close": 48625.83, "change": 284.52, "turnover": 9781.37}, {"d": "2026-10-15", "close": 46969.87, "change": -1655.96, "turnover": 14357.55}, {"d": "2026-10-16", "close": 47111.26, "change": 141.39, "turnover": 9938.15}, {"d": "2026-10-19", "close": 46822.08, "change": -289.18, "turnover": 8667.12}, {"d": "2026-10-20", "close": 46292.93, "change": -529.15, "turnover": 8029.47}, {"d": "2026-10-21", "close": 46887.77, "change": 594.84, "turnover": 8746.14}, {"d": "2026-10-22", "close": 46041.43, "change": -846.34, "turnover": 9334.37}, {"d": "2026-10-27", "close": 46096.23, "change": 54.8, "turnover": 10316.84}, {"d": "2026-10-28", "close": 47035.58, "change": 939.35, "turnover": 7503.41}, {"d": "2026-10-29", "close": 46368.33, "change": -667.25, "turnover": 8238.13}, {"d": "2026-10-30", "close": 45211.83, "change": -1156.5, "turnover": 9396.05}, {"d": "2026-11-02", "close": 44920.14, "change": -291.69, "turnover": 7996.88}, {"d": "2026-11-03", "close": 43307.54, "change": -1612.6, "turnover": 10020.36}, {"d": "2026-11-04", "close": 42948.91, "change": -358.63, "turnover": 11769.3}, {"d": "2026-11-05", "close": 41574.72, "change": -1374.19, "turnover": 9870.99}, {"d": "2026-11-06", "close": 39701.64, "change": -1873.08, "turnover": 13125.17}]}, "institutions": {"today": {"d": "2026-11-06", "foreign": -911.88, "trust": 266.58, "dealer_self": -43.09, "dealer_hedge": -451.67, "total": -1140.07}, "history": [{"d": "2026-10-07", "foreign": -130.44, "trust": -33.23, "dealer_self": -13.67, "dealer_hedge": -64.29, "total": -241.64}, {"d": "2026-10-08", "foreign": -758.52, "trust": 30.09, "dealer_self": -21.32, "dealer_hedge": -165.99, "total": -915.75}, {"d": "2026-10-12", "foreign": -521.98, "trust": 71.41, "dealer_self": -7.99, "dealer_hedge": -134.95, "total": -593.51}, {"d": "2026-10-13", "foreign": -1652.91, "trust": 246.25, "dealer_self": -92.47, "dealer_hedge": -477.29, "total": -1976.41}, {"d": "2026-10-14", "foreign": -200.37, "trust": 160.27, "dealer_self": -25.1, "dealer_hedge": -89.61, "total": -154.81}, {"d": "2026-10-15", "foreign": -3025.55, "trust": 292.83, "dealer_self": -86.83, "dealer_hedge": -871.4, "total": -3690.96}, {"d": "2026-10-16", "foreign": -461.47, "trust": 110.48, "dealer_self": -101.79, "dealer_hedge": -232.35, "total": -685.14}, {"d": "2026-10-19", "foreign": -767.43, "trust": 241.42, "dealer_self": -60.23, "dealer_hedge": -302.4, "total": -888.64}, {"d": "2026-10-20", "foreign": -795.4, "trust": 187.59, "dealer_self": -68.55, "dealer_hedge": -287.24, "total": -963.6}, {"d": "2026-10-21", "foreign": 22.39, "trust": 127.99, "dealer_self": -61.87, "dealer_hedge": -73.84, "total": 14.66}, {"d": "2026-10-22", "foreign": -815.82, "trust": 94.92, "dealer_self": -37.16, "dealer_hedge": -236.61, "total": -994.67}, {"d": "2026-10-27", "foreign": -80.39, "trust": 236.05, "dealer_self": 7.68, "dealer_hedge": -131.67, "total": 31.67}, {"d": "2026-10-28", "foreign": 159.57, "trust": 143.2, "dealer_self": 24.48, "dealer_hedge": -2.83, "total": 324.42}, {"d": "2026-10-29", "foreign": -688.15, "trust": 70.44, "dealer_self": -1.84, "dealer_hedge": -213.16, "total": -832.71}, {"d": "2026-10-30", "foreign": -1124.67, "trust": 236.19, "dealer_self": -38.4, "dealer_hedge": -475.29, "total": -1402.18}, {"d": "2026-11-02", "foreign": -735.21, "trust": 338.16, "dealer_self": 4.66, "dealer_hedge": -157.55, "total": -549.93}, {"d": "2026-11-03", "foreign": -1073.07, "trust": 199.05, "dealer_self": -87.04, "dealer_hedge": -503.51, "total": -1464.57}, {"d": "2026-11-04", "foreign": -1499.0, "trust": 276.31, "dealer_self": -7.53, "dealer_hedge": -367.66, "total": -1597.88}, {"d": "2026-11-05", "foreign": -1024.61, "trust": 225.32, "dealer_self": -39.16, "dealer_hedge": -396.11, "total": -1234.57}, {"d": "2026-11-06", "foreign": -911.88, "trust": 266.58, "dealer_self": -43.09, "dealer_hedge": -451.67, "total": -1140.07}], "foreign_streak": -7, "trust_streak": 19}, "futures": {"contract": "202611", "open": 38888.0, "high": 40690.0, "low": 37694.0, "close": 39786.0, "change": -2096.0, "volume": 143277.0, "settle": 39652.0, "oi": 125793.0, "basis": 84.36}, "fut_inst": {"today": {"d": "2026-11-06", "dealer": 1680, "trust": 90437, "foreign": -99930}, "foreign_change": -4279, "history": [{"d": "2026-10-07", "dealer": -2253, "trust": 76268, "foreign": -79101}, {"d": "2026-10-08", "dealer": -534, "trust": 76339, "foreign": -83194}, {"d": "2026-10-12", "dealer": 147, "trust": 76848, "foreign": -82806}, {"d": "2026-10-13", "dealer": 1491, "trust": 77838, "foreign": -87239}, {"d": "2026-10-14", "dealer": 2314, "trust": 78417, "foreign": -86814}, {"d": "2026-10-15", "dealer": 6894, "trust": 78929, "foreign": -97582}, {"d": "2026-10-16", "dealer": 3197, "trust": 82464, "foreign": -93675}, {"d": "2026-10-19", "dealer": 2829, "trust": 84100, "foreign": -91145}, {"d": "2026-10-20", "dealer": 2700, "trust": 84389, "foreign": -89748}, {"d": "2026-10-21", "dealer": 1716, "trust": 83778, "foreign": -86072}, {"d": "2026-10-22", "dealer": 3260, "trust": 83601, "foreign": -87297}, {"d": "2026-10-27", "dealer": 1454, "trust": 85052, "foreign": -86043}, {"d": "2026-10-28", "dealer": 483, "trust": 87179, "foreign": -84917}, {"d": "2026-10-29", "dealer": 1511, "trust": 87218, "foreign": -89522}, {"d": "2026-10-30", "dealer": 1736, "trust": 89211, "foreign": -92241}, {"d": "2026-11-02", "dealer": 1307, "trust": 89139, "foreign": -89379}, {"d": "2026-11-03", "dealer": 3976, "trust": 86998, "foreign": -91812}, {"d": "2026-11-04", "dealer": 2961, "trust": 89500, "foreign": -93647}, {"d": "2026-11-05", "dealer": 2330, "trust": 90283, "foreign": -95651}, {"d": "2026-11-06", "dealer": 1680, "trust": 90437, "foreign": -99930}]}, "options": {"nearest": {"contract": "202611W2", "expiry": "2026-11-11", "max_pain": 38400.0}, "monthly": {"contract": "202611", "expiry": "2026-11-18", "max_pain": 44800.0}, "call_wall": {"k": 41000.0, "oi": 1569}, "put_wall": {"k": 38000.0, "oi": 1629}, "call_oi_total": 106751, "put_oi_total": 42414, "strikes": [{"k": 37300.0, "c": 0, "p": 95}, {"k": 37400.0, "c": 2, "p": 593}, {"k": 37500.0, "c": 7, "p": 293}, {"k": 37600.0, "c": 17, "p": 459}, {"k": 37700.0, "c": 32, "p": 200}, {"k": 37800.0, "c": 1003, "p": 484}, {"k": 37900.0, "c": 1000, "p": 93}, {"k": 38000.0, "c": 68, "p": 1629}, {"k": 38100.0, "c": 1020, "p": 131}, {"k": 38200.0, "c": 1018, "p": 213}, {"k": 38300.0, "c": 2001, "p": 345}, {"k": 38400.0, "c": 2000, "p": 471}, {"k": 38500.0, "c": 88, "p": 697}, {"k": 38600.0, "c": 2024, "p": 832}, {"k": 38700.0, "c": 2009, "p": 517}, {"k": 38800.0, "c": 2006, "p": 792}, {"k": 38900.0, "c": 1087, "p": 211}, {"k": 39000.0, "c": 186, "p": 982}, {"k": 39100.0, "c": 66, "p": 104}, {"k": 39200.0, "c": 27, "p": 61}, {"k": 39300.0, "c": 27, "p": 70}, {"k": 39400.0, "c": 74, "p": 126}, {"k": 39500.0, "c": 59, "p": 416}, {"k": 39600.0, "c": 55, "p": 180}, {"k": 39700.0, "c": 102, "p": 107}, {"k": 39800.0, "c": 219, "p": 146}, {"k": 39900.0, "c": 105, "p": 120}, {"k": 40000.0, "c": 712, "p": 2107}, {"k": 40100.0, "c": 107, "p": 98}, {"k": 40200.0, "c": 94, "p": 114}, {"k": 40300.0, "c": 83, "p": 126}, {"k": 40400.0, "c": 89, "p": 156}, {"k": 40500.0, "c": 1077, "p": 1018}, {"k": 40600.0, "c": 51, "p": 172}, {"k": 40700.0, "c": 1053, "p": 486}, {"k": 40800.0, "c": 111, "p": 431}, {"k": 40900.0, "c": 1024, "p": 563}, {"k": 41000.0, "c": 1569, "p": 863}, {"k": 41100.0, "c": 1037, "p": 332}, {"k": 41200.0, "c": 95, "p": 169}, {"k": 41300.0, "c": 88, "p": 59}, {"k": 41400.0, "c": 77, "p": 258}, {"k": 41500.0, "c": 301, "p": 350}, {"k": 41600.0, "c": 127, "p": 164}, {"k": 41700.0, "c": 99, "p": 311}, {"k": 41800.0, "c": 150, "p": 149}, {"k": 41900.0, "c": 167, "p": 314}, {"k": 42000.0, "c": 1358, "p": 1369}, {"k": 42100.0, "c": 82, "p": 116}, {"k": 42200.0, "c": 121, "p": 196}], "pc_oi": 39.73, "pc_vol": 75.85, "pc_history": [{"d": "2026-10-07", "vol": 94.57, "oi": 82.25}, {"d": "2026-10-08", "vol": 87.14, "oi": 80.18}, {"d": "2026-10-12", "vol": 102.35, "oi": 84.78}, {"d": "2026-10-13", "vol": 88.76, "oi": 68.95}, {"d": "2026-10-14", "vol": 103.47, "oi": 74.44}, {"d": "2026-10-15", "vol": 74.99, "oi": 60.84}, {"d": "2026-10-16", "vol": 88.75, "oi": 67.6}, {"d": "2026-10-19", "vol": 94.54, "oi": 61.6}, {"d": "2026-10-20", "vol": 129.06, "oi": 66.17}, {"d": "2026-10-21", "vol": 111.88, "oi": 62.86}, {"d": "2026-10-22", "vol": 86.21, "oi": 66.18}, {"d": "2026-10-27", "vol": 89.89, "oi": 61.96}, {"d": "2026-10-28", "vol": 92.29, "oi": 69.38}, {"d": "2026-10-29", "vol": 80.96, "oi": 64.46}, {"d": "2026-10-30", "vol": 90.91, "oi": 62.59}, {"d": "2026-11-02", "vol": 93.75, "oi": 61.58}, {"d": "2026-11-03", "vol": 79.99, "oi": 47.77}, {"d": "2026-11-04", "vol": 85.0, "oi": 49.37}, {"d": "2026-11-05", "vol": 72.63, "oi": 44.09}, {"d": "2026-11-06", "vol": 75.85, "oi": 39.73}]}, "stocks": [{"code": "2330", "name": "台積電", "group": "晶圓代工", "tag": "權值", "market": "twse", "close": 2135.0, "change": -105.0, "pct": -4.69, "open": 2020.0, "high": 2195.0, "low": 2020.0, "volume": 108892, "vol_ratio": 2.44, "ma5": 2252.0, "ma20": 2400.75, "ma60": 2422.08, "high60": 2585.0, "low60": 2135.0, "spark": [2585.0, 2550.0, 2540.0, 2490.0, 2490.0, 2440.0, 2420.0, 2420.0, 2405.0, 2420.0, 2385.0, 2400.0, 2425.0, 2415.0, 2370.0, 2330.0, 2295.0, 2260.0, 2240.0, 2135.0], "signals": ["空頭排列", "60日新低", "爆量"]}, {"code": "2317", "name": "鴻海", "group": "AI 伺服器", "tag": "權值", "market": "twse", "close": 224.5, "change": -10.5, "pct": -4.47, "open": 213.0, "high": 227.5, "low": 212.5, "volume": 89094, "vol_ratio": 1.85, "ma5": 239.2, "ma20": 243.82, "ma60": 249.4, "high60": 270.0, "low60": 224.5, "spark": [252.0, 249.0, 244.5, 240.0, 243.0, 239.5, 244.0, 239.5, 241.5, 250.0, 245.0, 247.5, 251.5, 248.0, 245.5, 251.0, 245.5, 240.0, 235.0, 224.5], "signals": ["空頭排列", "60日新低"]}, {"code": "2454", "name": "聯發科", "group": "IC 設計", "tag": "自選", "market": "twse", "close": 3390.0, "change": -70.0, "pct": -2.02, "open": 3115.0, "high": 3480.0, "low": 3115.0, "volume": 23481, "vol_ratio": 1.69, "ma5": 3642.0, "ma20": 4121.75, "ma60": 4322.25, "high60": 5285.0, "low60": 3390.0, "spark": [4835.0, 4690.0, 4625.0, 4525.0, 4475.0, 4165.0, 4250.0, 4205.0, 4150.0, 4140.0, 4010.0, 3960.0, 4235.0, 4045.0, 3915.0, 3970.0, 3675.0, 3715.0, 3460.0, 3390.0], "signals": ["空頭排列", "60日新低"]}, {"code": "2301", "name": "光寶科", "group": "AI 電源", "tag": "自選", "market": "twse", "close": 198.0, "change": -13.5, "pct": -6.38, "open": 190.5, "high": 203.5, "low": 190.5, "volume": 22710, "vol_ratio": 1.07, "ma5": 221.4, "ma20": 256.77, "ma60": 275.87, "high60": 317.5, "low60": 198.0, "spark": [300.0, 297.5, 288.0, 276.0, 283.0, 268.0, 264.5, 264.0, 262.0, 263.5, 255.5, 252.5, 261.5, 252.0, 240.5, 243.5, 228.0, 226.0, 211.5, 198.0], "signals": ["空頭排列", "60日新低"]}, {"code": "2308", "name": "台達電", "group": "電源散熱", "tag": "自選", "market": "twse", "close": 1055.0, "change": -75.0, "pct": -6.64, "open": 1020.0, "high": 1070.0, "low": 1020.0, "volume": 33286, "vol_ratio": 1.56, "ma5": 1206.0, "ma20": 1550.75, "ma60": 1721.58, "high60": 2050.0, "low60": 1055.0, "spark": [1990.0, 1965.0, 1900.0, 1775.0, 1785.0, 1630.0, 1635.0, 1640.0, 1605.0, 1625.0, 1560.0, 1510.0, 1550.0, 1480.0, 1335.0, 1355.0, 1270.0, 1220.0, 1130.0, 1055.0], "signals": ["空頭排列", "60日新低"]}, {"code": "2402", "name": "毅嘉", "group": "車載軟板", "tag": "自選", "market": "twse", "close": 45.05, "change": -2.3, "pct": -4.86, "open": 42.65, "high": 46.15, "low": 42.65, "volume": 4023, "vol_ratio": 1.74, "ma5": 49.94, "ma20": 57.22, "ma60": 56.25, "high60": 65.6, "low60": 45.05, "spark": [61.9, 61.0, 62.2, 60.9, 65.6, 63.1, 60.4, 59.1, 60.1, 60.6, 57.3, 56.3, 57.2, 56.0, 53.0, 53.9, 52.1, 51.3, 47.35, 45.05], "signals": ["60日新低"]}, {"code": "2449", "name": "京元電", "group": "測試代工", "tag": "自選", "market": "twse", "close": 206.0, "change": -22.5, "pct": -9.85, "open": 206.0, "high": 212.5, "low": 206.0, "volume": 28180, "vol_ratio": 1.89, "ma5": 239.9, "ma20": 269.25, "ma60": 268.06, "high60": 317.0, "low60": 206.0, "spark": [299.5, 304.5, 300.0, 305.0, 296.5, 272.0, 275.0, 263.5, 259.5, 278.0, 262.5, 269.0, 277.5, 269.5, 253.5, 263.0, 253.5, 248.5, 228.5, 206.0], "signals": ["跌停", "60日新低"]}, {"code": "3037", "name": "欣興", "group": "ABF 載板", "tag": "自選", "market": "twse", "close": 727.0, "change": -73.0, "pct": -9.12, "open": 720.0, "high": 771.0, "low": 720.0, "volume": 37787, "vol_ratio": 1.4, "ma5": 862.8, "ma20": 1061.15, "ma60": 1064.75, "high60": 1325.0, "low60": 727.0, "spark": [1305.0, 1270.0, 1255.0, 1180.0, 1185.0, 1075.0, 1090.0, 1120.0, 1055.0, 1100.0, 1085.0, 1060.0, 1100.0, 1040.0, 989.0, 997.0, 902.0, 888.0, 800.0, 727.0], "signals": ["空頭排列", "60日新低"]}, {"code": "3044", "name": "健鼎", "group": "伺服器 PCB", "tag": "自選", "market": "twse", "close": 413.5, "change": -25.0, "pct": -5.7, "open": 395.0, "high": 421.0, "low": 395.0, "volume": 3817, "vol_ratio": 1.27, "ma5": 470.3, "ma20": 541.83, "ma60": 513.42, "high60": 603.0, "low60": 401.5, "spark": [582.0, 582.0, 579.0, 572.0, 603.0, 586.0, 584.0, 577.0, 567.0, 583.0, 556.0, 522.0, 544.0, 536.0, 512.0, 527.0, 488.5, 484.0, 438.5, 413.5], "signals": []}, {"code": "3211", "name": "順達", "group": "伺服器 BBU", "tag": "自選", "market": "tpex", "close": 230.5, "change": -19.5, "pct": -7.8, "open": 225.0, "high": 235.5, "low": 225.0, "volume": 5300, "vol_ratio": 1.33, "ma5": 266.4, "ma20": 326.85, "ma60": 361.91, "high60": 412.0, "low60": 230.5, "spark": [389.5, 388.0, 382.5, 361.0, 361.0, 349.0, 346.0, 343.0, 342.5, 338.0, 320.0, 327.0, 337.0, 323.0, 297.5, 302.0, 279.5, 270.0, 250.0, 230.5], "inst": {"foreign": 1219, "trust": -231, "dealer": -768, "total": 220}, "foreign_streak": 6, "trust_streak": -3, "foreign5": 3638, "trust5": -1668, "signals": ["空頭排列", "60日新低", "外資連6買", "投信連3賣"]}, {"code": "3481", "name": "群創", "group": "FOPLP 面板", "tag": "自選", "market": "twse", "close": 36.05, "change": -1.95, "pct": -5.13, "open": 34.2, "high": 37.15, "low": 34.2, "volume": 243609, "vol_ratio": 1.69, "ma5": 40.14, "ma20": 46.26, "ma60": 48.23, "high60": 54.7, "low60": 36.05, "spark": [52.5, 51.0, 51.3, 50.0, 50.9, 48.3, 48.25, 46.95, 46.8, 48.5, 46.75, 46.25, 48.45, 46.0, 42.55, 44.55, 41.2, 40.9, 38.0, 36.05], "signals": ["空頭排列", "60日新低"]}, {"code": "3661", "name": "世芯-KY", "group": "ASIC 設計", "tag": "自選", "market": "twse", "close": 2830.0, "change": -130.0, "pct": -4.39, "open": 2665.0, "high": 2875.0, "low": 2665.0, "volume": 3261, "vol_ratio": 1.62, "ma5": 3101.0, "ma20": 3639.0, "ma60": 3783.42, "high60": 4395.0, "low60": 2830.0, "spark": [4190.0, 4345.0, 4395.0, 4055.0, 3940.0, 3705.0, 3685.0, 3715.0, 3640.0, 3710.0, 3495.0, 3495.0, 3800.0, 3680.0, 3425.0, 3395.0, 3140.0, 3180.0, 2960.0, 2830.0], "signals": ["空頭排列", "60日新低"]}, {"code": "3665", "name": "貿聯-KY", "group": "高速傳輸線", "tag": "自選", "market": "twse", "close": 1325.0, "change": -145.0, "pct": -9.86, "open": 1325.0, "high": 1370.0, "low": 1325.0, "volume": 4974, "vol_ratio": 1.39, "ma5": 1513.0, "ma20": 1886.0, "ma60": 2087.0, "high60": 2595.0, "low60": 1325.0, "spark": [2315.0, 2360.0, 2355.0, 2260.0, 2235.0, 2015.0, 2015.0, 1975.0, 1925.0, 1950.0, 1875.0, 1735.0, 1810.0, 1705.0, 1625.0, 1625.0, 1575.0, 1570.0, 1470.0, 1325.0], "signals": ["跌停", "空頭排列", "60日新低"]}, {"code": "3711", "name": "日月光投控", "group": "先進封裝", "tag": "自選", "market": "twse", "close": 527.0, "change": -45.0, "pct": -7.87, "open": 515.0, "high": 551.0, "low": 515.0, "volume": 43145, "vol_ratio": 1.44, "ma5": 603.2, "ma20": 672.5, "ma60": 646.12, "high60": 762.0, "low60": 527.0, "spark": [732.0, 744.0, 762.0, 740.0, 747.0, 673.0, 671.0, 670.0, 660.0, 684.0, 654.0, 651.0, 695.0, 683.0, 668.0, 674.0, 616.0, 627.0, 572.0, 527.0], "signals": ["60日新低"]}, {"code": "2409", "name": "友達", "group": "", "tag": "自選", "market": "twse", "close": 26.55, "change": -0.7, "pct": -2.57, "open": 24.55, "high": 27.2, "low": 24.55, "volume": 281010, "vol_ratio": 1.28, "ma5": 28.49, "ma20": 33.63, "ma60": 30.99, "high60": 40.45, "low60": 25.25, "spark": [37.95, 36.6, 35.55, 34.15, 36.25, 34.9, 35.9, 36.7, 35.75, 37.25, 35.4, 33.45, 35.55, 34.05, 30.65, 30.75, 28.8, 29.1, 27.25, 26.55], "signals": []}], "inst_rank": {"foreign": {"buy": {"amount": [{"code": "2408", "name": "南亞科", "market": "twse", "close": 343.5, "pct": -4.58, "etf": false, "lots": 5624, "amount": 19.32}, {"code": "3008", "name": "大立光", "market": "twse", "close": 4480.0, "pct": -0.99, "etf": false, "lots": 374, "amount": 16.76}, {"code": "6446", "name": "藥華藥", "market": "twse", "close": 1270.0, "pct": 7.17, "etf": false, "lots": 836, "amount": 10.62}, {"code": "6239", "name": "力成", "market": "twse", "close": 203.5, "pct": -7.5, "etf": false, "lots": 5109, "amount": 10.4}, {"code": "00687B", "name": "國泰20年美債", "market": "tpex", "close": 27.94, "pct": -0.39, "etf": true, "lots": 32602, "amount": 9.11}, {"code": "00937B", "name": "群益ESG投等債20+", "market": "tpex", "close": 14.47, "pct": -0.55, "etf": true, "lots": 54713, "amount": 7.92}, {"code": "3081", "name": "聯亞", "market": "tpex", "close": 1750.0, "pct": -7.41, "etf": false, "lots": 445, "amount": 7.79}, {"code": "3481", "name": "群創", "market": "twse", "close": 36.05, "pct": -5.13, "etf": false, "lots": 21314, "amount": 7.68}, {"code": "6147", "name": "頎邦", "market": "tpex", "close": 142.0, "pct": -9.84, "etf": false, "lots": 5018, "amount": 7.13}, {"code": "2344", "name": "華邦電", "market": "twse", "close": 120.5, "pct": -5.49, "etf": false, "lots": 5873, "amount": 7.08}], "lots": [{"code": "00937B", "name": "群益ESG投等債20+", "market": "tpex", "close": 14.47, "pct": -0.55, "etf": true, "lots": 54713, "amount": 7.92}, {"code": "00953B", "name": "群益優選非投等債", "market": "twse", "close": 9.67, "pct": -0.1, "etf": true, "lots": 52259, "amount": 5.05}, {"code": "00687B", "name": "國泰20年美債", "market": "tpex", "close": 27.94, "pct": -0.39, "etf": true, "lots": 32602, "amount": 9.11}, {"code": "00679B", "name": "元大美債20年", "market": "tpex", "close": 26.89, "pct": -0.37, "etf": true, "lots": 24866, "amount": 6.69}, {"code": "00712", "name": "復華富時不動產", "market": "twse", "close": 7.22, "pct": -2.04, "etf": true, "lots": 24266, "amount": 1.75}, {"code": "3481", "name": "群創", "market": "twse", "close": 36.05, "pct": -5.13, "etf": false, "lots": 21314, "amount": 7.68}, {"code": "2409", "name": "友達", "market": "twse", "close": 26.55, "pct": -2.57, "etf": false, "lots": 18844, "amount": 5.0}, {"code": "00984D", "name": "主動聯博全球非投", "market": "twse", "close": 9.75, "pct": -0.2, "etf": true, "lots": 18436, "amount": 1.8}, {"code": "00933B", "name": "國泰10Y+金融債", "market": "tpex", "close": 15.93, "pct": -0.38, "etf": true, "lots": 17632, "amount": 2.81}, {"code": "1101", "name": "台泥", "market": "twse", "close": 26.75, "pct": -1.65, "etf": false, "lots": 17591, "amount": 4.71}]}, "sell": {"amount": [{"code": "2330", "name": "台積電", "market": "twse", "close": 2135.0, "pct": -4.69, "etf": false, "lots": -22844, "amount": -487.72}, {"code": "2454", "name": "聯發科", "market": "twse", "close": 3390.0, "pct": -2.02, "etf": false, "lots": -4536, "amount": -153.77}, {"code": "0050", "name": "元大台灣50", "market": "twse", "close": 92.5, "pct": -4.79, "etf": true, "lots": -88714, "amount": -82.06}, {"code": "3711", "name": "日月光投控", "market": "twse", "close": 527.0, "pct": -7.87, "etf": false, "lots": -11302, "amount": -59.56}, {"code": "3037", "name": "欣興", "market": "twse", "close": 727.0, "pct": -9.12, "etf": false, "lots": -5859, "amount": -42.59}, {"code": "2308", "name": "台達電", "market": "twse", "close": 1055.0, "pct": -6.64, "etf": false, "lots": -3651, "amount": -38.52}, {"code": "2383", "name": "台光電", "market": "twse", "close": 3820.0, "pct": -6.83, "etf": false, "lots": -869, "amount": -33.2}, {"code": "2317", "name": "鴻海", "market": "twse", "close": 224.5, "pct": -4.47, "etf": false, "lots": -14082, "amount": -31.61}, {"code": "1303", "name": "南亞", "market": "twse", "close": 239.5, "pct": -3.82, "etf": false, "lots": -7519, "amount": -18.01}, {"code": "3017", "name": "奇鋐", "market": "twse", "close": 2310.0, "pct": -9.94, "etf": false, "lots": -763, "amount": -17.63}], "lots": [{"code": "0050", "name": "元大台灣50", "market": "twse", "close": 92.5, "pct": -4.79, "etf": true, "lots": -88714, "amount": -82.06}, {"code": "00406A", "name": "主動中信台灣收益", "market": "twse", "close": 6.85, "pct": -6.93, "etf": true, "lots": -50235, "amount": -3.44}, {"code": "00981A", "name": "主動統一台股增長", "market": "twse", "close": 21.46, "pct": -6.9, "etf": true, "lots": -46530, "amount": -9.99}, {"code": "00992A", "name": "主動群益科技創新", "market": "twse", "close": 12.62, "pct": -7.0, "etf": true, "lots": -36706, "amount": -4.63}, {"code": "2002", "name": "中鋼", "market": "twse", "close": 18.55, "pct": -2.11, "etf": false, "lots": -30305, "amount": -5.62}, {"code": "2330", "name": "台積電", "market": "twse", "close": 2135.0, "pct": -4.69, "etf": false, "lots": -22844, "amount": -487.72}, {"code": "00919", "name": "群益台灣精選高息", "market": "twse", "close": 30.14, "pct": -3.37, "etf": true, "lots": -22726, "amount": -6.85}, {"code": "009816", "name": "凱基台灣TOP50", "market": "twse", "close": 13.88, "pct": -4.47, "etf": true, "lots": -22376, "amount": -3.11}, {"code": "0056", "name": "元大高股息", "market": "twse", "close": 49.91, "pct": -3.18, "etf": true, "lots": -17120, "amount": -8.54}, {"code": "00878", "name": "國泰永續高股息", "market": "twse", "close": 31.99, "pct": -3.15, "etf": true, "lots": -16412, "amount": -5.25}]}}, "trust": {"buy": {"amount": [{"code": "2330", "name": "台積電", "market": "twse", "close": 2135.0, "pct": -4.69, "etf": false, "lots": 4669, "amount": 99.68}, {"code": "2383", "name": "台光電", "market": "twse", "close": 3820.0, "pct": -6.83, "etf": false, "lots": 484, "amount": 18.49}, {"code": "2454", "name": "聯發科", "market": "twse", "close": 3390.0, "pct": -2.02, "etf": false, "lots": 512, "amount": 17.36}, {"code": "3017", "name": "奇鋐", "market": "twse", "close": 2310.0, "pct": -9.94, "etf": false, "lots": 405, "amount": 9.36}, {"code": "1303", "name": "南亞", "market": "twse", "close": 239.5, "pct": -3.82, "etf": false, "lots": 3639, "amount": 8.72}, {"code": "3711", "name": "日月光投控", "market": "twse", "close": 527.0, "pct": -7.87, "etf": false, "lots": 1630, "amount": 8.59}, {"code": "7769", "name": "鴻勁", "market": "twse", "close": 3675.0, "pct": -7.66, "etf": false, "lots": 226, "amount": 8.31}, {"code": "0050", "name": "元大台灣50", "market": "twse", "close": 92.5, "pct": -4.79, "etf": true, "lots": 8361, "amount": 7.73}, {"code": "3653", "name": "健策", "market": "twse", "close": 5225.0, "pct": -9.99, "etf": false, "lots": 147, "amount": 7.68}, {"code": "6223", "name": "旺矽", "market": "tpex", "close": 3445.0, "pct": -7.52, "etf": false, "lots": 186, "amount": 6.41}], "lots": [{"code": "2887", "name": "台新新光金", "market": "twse", "close": 38.45, "pct": -4.11, "etf": false, "lots": 8819, "amount": 3.39}, {"code": "2891", "name": "中信金", "market": "twse", "close": 73.4, "pct": -2.0, "etf": false, "lots": 8431, "amount": 6.19}, {"code": "0050", "name": "元大台灣50", "market": "twse", "close": 92.5, "pct": -4.79, "etf": true, "lots": 8361, "amount": 7.73}, {"code": "2890", "name": "永豐金", "market": "twse", "close": 41.7, "pct": -2.8, "etf": false, "lots": 7590, "amount": 3.17}, {"code": "2330", "name": "台積電", "market": "twse", "close": 2135.0, "pct": -4.69, "etf": false, "lots": 4669, "amount": 99.68}, {"code": "2882", "name": "國泰金", "market": "twse", "close": 106.0, "pct": -5.36, "etf": false, "lots": 3901, "amount": 4.14}, {"code": "1303", "name": "南亞", "market": "twse", "close": 239.5, "pct": -3.82, "etf": false, "lots": 3639, "amount": 8.72}, {"code": "2886", "name": "兆豐金", "market": "twse", "close": 53.5, "pct": -0.93, "etf": false, "lots": 3336, "amount": 1.78}, {"code": "2880", "name": "華南金", "market": "twse", "close": 48.95, "pct": -1.31, "etf": false, "lots": 3207, "amount": 1.57}, {"code": "2884", "name": "玉山金", "market": "twse", "close": 47.0, "pct": -1.98, "etf": false, "lots": 2886, "amount": 1.36}]}, "sell": {"amount": [{"code": "2881", "name": "富邦金", "market": "twse", "close": 148.0, "pct": -4.82, "etf": false, "lots": -6424, "amount": -9.51}, {"code": "6488", "name": "環球晶", "market": "tpex", "close": 512.0, "pct": -9.22, "etf": false, "lots": -1789, "amount": -9.16}, {"code": "2344", "name": "華邦電", "market": "twse", "close": 120.5, "pct": -5.49, "etf": false, "lots": -4620, "amount": -5.57}, {"code": "6505", "name": "台塑化", "market": "twse", "close": 85.7, "pct": -2.5, "etf": false, "lots": -5518, "amount": -4.73}, {"code": "5347", "name": "世界", "market": "tpex", "close": 120.0, "pct": -4.76, "etf": false, "lots": -2452, "amount": -2.94}, {"code": "1560", "name": "中砂", "market": "twse", "close": 669.0, "pct": -5.77, "etf": false, "lots": -402, "amount": -2.69}, {"code": "6274", "name": "台燿", "market": "tpex", "close": 906.0, "pct": -9.85, "etf": false, "lots": -219, "amount": -1.98}, {"code": "2404", "name": "漢唐", "market": "twse", "close": 886.0, "pct": -7.32, "etf": false, "lots": -129, "amount": -1.14}, {"code": "3189", "name": "景碩", "market": "twse", "close": 671.0, "pct": -9.32, "etf": false, "lots": -148, "amount": -0.99}, {"code": "6515", "name": "穎崴", "market": "twse", "close": 3295.0, "pct": -8.98, "etf": false, "lots": -27, "amount": -0.89}], "lots": [{"code": "2881", "name": "富邦金", "market": "twse", "close": 148.0, "pct": -4.82, "etf": false, "lots": -6424, "amount": -9.51}, {"code": "6505", "name": "台塑化", "market": "twse", "close": 85.7, "pct": -2.5, "etf": false, "lots": -5518, "amount": -4.73}, {"code": "2344", "name": "華邦電", "market": "twse", "close": 120.5, "pct": -5.49, "etf": false, "lots": -4620, "amount": -5.57}, {"code": "5347", "name": "世界", "market": "tpex", "close": 120.0, "pct": -4.76, "etf": false, "lots": -2452, "amount": -2.94}, {"code": "6488", "name": "環球晶", "market": "tpex", "close": 512.0, "pct": -9.22, "etf": false, "lots": -1789, "amount": -9.16}, {"code": "3376", "name": "新日興", "market": "twse", "close": 109.5, "pct": -8.37, "etf": false, "lots": -540, "amount": -0.59}, {"code": "2486", "name": "一詮", "market": "twse", "close": 145.0, "pct": -8.81, "etf": false, "lots": -450, "amount": -0.65}, {"code": "1560", "name": "中砂", "market": "twse", "close": 669.0, "pct": -5.77, "etf": false, "lots": -402, "amount": -2.69}, {"code": "1802", "name": "台玻", "market": "twse", "close": 57.8, "pct": -3.83, "etf": false, "lots": -397, "amount": -0.23}, {"code": "2637", "name": "慧洋-KY", "market": "twse", "close": 94.4, "pct": -4.26, "etf": false, "lots": -345, "amount": -0.33}]}}, "dealer": {"buy": {"amount": [{"code": "2330", "name": "台積電", "market": "twse", "close": 2135.0, "pct": -4.69, "etf": false, "lots": 8702, "amount": 185.79}, {"code": "2454", "name": "聯發科", "market": "twse", "close": 3390.0, "pct": -2.02, "etf": false, "lots": 798, "amount": 27.05}, {"code": "00632R", "name": "元大台灣50反1", "market": "twse", "close": 11.46, "pct": 4.95, "etf": true, "lots": 197930, "amount": 22.68}, {"code": "2317", "name": "鴻海", "market": "twse", "close": 224.5, "pct": -4.47, "etf": false, "lots": 4267, "amount": 9.58}, {"code": "00679B", "name": "元大美債20年", "market": "tpex", "close": 26.89, "pct": -0.37, "etf": true, "lots": 34615, "amount": 9.31}, {"code": "2891", "name": "中信金", "market": "twse", "close": 73.4, "pct": -2.0, "etf": false, "lots": 12014, "amount": 8.82}, {"code": "2308", "name": "台達電", "market": "twse", "close": 1055.0, "pct": -6.64, "etf": false, "lots": 832, "amount": 8.78}, {"code": "00937B", "name": "群益ESG投等債20+", "market": "tpex", "close": 14.47, "pct": -0.55, "etf": true, "lots": 60410, "amount": 8.74}, {"code": "3711", "name": "日月光投控", "market": "twse", "close": 527.0, "pct": -7.87, "etf": false, "lots": 1654, "amount": 8.72}, {"code": "1303", "name": "南亞", "market": "twse", "close": 239.5, "pct": -3.82, "etf": false, "lots": 2616, "amount": 6.27}], "lots": [{"code": "00632R", "name": "元大台灣50反1", "market": "twse", "close": 11.46, "pct": 4.95, "etf": true, "lots": 197930, "amount": 22.68}, {"code": "00937B", "name": "群益ESG投等債20+", "market": "tpex", "close": 14.47, "pct": -0.55, "etf": true, "lots": 60410, "amount": 8.74}, {"code": "00673R", "name": "期元大S&P原油反1", "market": "twse", "close": 10.44, "pct": -4.57, "etf": true, "lots": 49526, "amount": 5.17}, {"code": "00679B", "name": "元大美債20年", "market": "tpex", "close": 26.89, "pct": -0.37, "etf": true, "lots": 34615, "amount": 9.31}, {"code": "00664R", "name": "國泰臺灣加權反1", "market": "twse", "close": 1.84, "pct": 3.95, "etf": true, "lots": 32637, "amount": 0.6}, {"code": "00712", "name": "復華富時不動產", "market": "twse", "close": 7.22, "pct": -2.04, "etf": true, "lots": 27586, "amount": 1.99}, {"code": "00680L", "name": "元大美債20正2", "market": "twse", "close": 6.45, "pct": -0.62, "etf": true, "lots": 27115, "amount": 1.75}, {"code": "00671R", "name": "富邦NASDAQ反1", "market": "twse", "close": 2.65, "pct": 4.74, "etf": true, "lots": 21972, "amount": 0.58}, {"code": "00882", "name": "中信中國高股息", "market": "twse", "close": 15.68, "pct": 0.26, "etf": true, "lots": 20465, "amount": 3.21}, {"code": "00953B", "name": "群益優選非投等債", "market": "twse", "close": 9.67, "pct": -0.1, "etf": true, "lots": 19490, "amount": 1.88}]}, "sell": {"amount": [{"code": "0050", "name": "元大台灣50", "market": "twse", "close": 92.5, "pct": -4.79, "etf": true, "lots": -457625, "amount": -423.3}, {"code": "00631L", "name": "元大台灣50正2", "market": "twse", "close": 26.3, "pct": -9.96, "etf": true, "lots": -463251, "amount": -121.84}, {"code": "00685L", "name": "群益臺灣加權正2", "market": "twse", "close": 8.56, "pct": -9.89, "etf": true, "lots": -652359, "amount": -55.84}, {"code": "009816", "name": "凱基台灣TOP50", "market": "twse", "close": 13.88, "pct": -4.47, "etf": true, "lots": -279524, "amount": -38.8}, {"code": "0056", "name": "元大高股息", "market": "twse", "close": 49.91, "pct": -3.18, "etf": true, "lots": -77035, "amount": -38.45}, {"code": "00406A", "name": "主動中信台灣收益", "market": "twse", "close": 6.85, "pct": -6.93, "etf": true, "lots": -497428, "amount": -34.07}, {"code": "00878", "name": "國泰永續高股息", "market": "twse", "close": 31.99, "pct": -3.15, "etf": true, "lots": -91135, "amount": -29.15}, {"code": "00981A", "name": "主動統一台股增長", "market": "twse", "close": 21.46, "pct": -6.9, "etf": true, "lots": -99218, "amount": -21.29}, {"code": "006208", "name": "富邦台50", "market": "twse", "close": 210.1, "pct": -5.59, "etf": true, "lots": -8346, "amount": -17.53}, {"code": "00919", "name": "群益台灣精選高息", "market": "twse", "close": 30.14, "pct": -3.37, "etf": true, "lots": -40709, "amount": -12.27}], "lots": [{"code": "00685L", "name": "群益臺灣加權正2", "market": "twse", "close": 8.56, "pct": -9.89, "etf": true, "lots": -652359, "amount": -55.84}, {"code": "00406A", "name": "主動中信台灣收益", "market": "twse", "close": 6.85, "pct": -6.93, "etf": true, "lots": -497428, "amount": -34.07}, {"code": "00631L", "name": "元大台灣50正2", "market": "twse", "close": 26.3, "pct": -9.96, "etf": true, "lots": -463251, "amount": -121.84}, {"code": "0050", "name": "元大台灣50", "market": "twse", "close": 92.5, "pct": -4.79, "etf": true, "lots": -457625, "amount": -423.3}, {"code": "009816", "name": "凱基台灣TOP50", "market": "twse", "close": 13.88, "pct": -4.47, "etf": true, "lots": -279524, "amount": -38.8}, {"code": "00403A", "name": "主動統一升級50", "market": "twse", "close": 8.0, "pct": -5.44, "etf": true, "lots": -115023, "amount": -9.2}, {"code": "00981A", "name": "主動統一台股增長", "market": "twse", "close": 21.46, "pct": -6.9, "etf": true, "lots": -99218, "amount": -21.29}, {"code": "00878", "name": "國泰永續高股息", "market": "twse", "close": 31.99, "pct": -3.15, "etf": true, "lots": -91135, "amount": -29.15}, {"code": "0056", "name": "元大高股息", "market": "twse", "close": 49.91, "pct": -3.18, "etf": true, "lots": -77035, "amount": -38.45}, {"code": "00919", "name": "群益台灣精選高息", "market": "twse", "close": 30.14, "pct": -3.37, "etf": true, "lots": -40709, "amount": -12.27}]}}, "total": {"buy": {"amount": [{"code": "00632R", "name": "元大台灣50反1", "market": "twse", "close": 11.46, "pct": 4.95, "etf": true, "lots": 198702, "amount": 22.77}, {"code": "2408", "name": "南亞科", "market": "twse", "close": 343.5, "pct": -4.58, "etf": false, "lots": 5547, "amount": 19.05}, {"code": "6446", "name": "藥華藥", "market": "twse", "close": 1270.0, "pct": 7.17, "etf": false, "lots": 1372, "amount": 17.42}, {"code": "00937B", "name": "群益ESG投等債20+", "market": "tpex", "close": 14.47, "pct": -0.55, "etf": true, "lots": 115123, "amount": 16.66}, {"code": "00679B", "name": "元大美債20年", "market": "tpex", "close": 26.89, "pct": -0.37, "etf": true, "lots": 59481, "amount": 15.99}, {"code": "00687B", "name": "國泰20年美債", "market": "tpex", "close": 27.94, "pct": -0.39, "etf": true, "lots": 47632, "amount": 13.31}, {"code": "2412", "name": "中華電", "market": "twse", "close": 163.5, "pct": 1.24, "etf": false, "lots": 7152, "amount": 11.69}, {"code": "6239", "name": "力成", "market": "twse", "close": 203.5, "pct": -7.5, "etf": false, "lots": 5376, "amount": 10.94}, {"code": "3008", "name": "大立光", "market": "twse", "close": 4480.0, "pct": -0.99, "etf": false, "lots": 210, "amount": 9.41}, {"code": "3481", "name": "群創", "market": "twse", "close": 36.05, "pct": -5.13, "etf": false, "lots": 24357, "amount": 8.78}], "lots": [{"code": "00632R", "name": "元大台灣50反1", "market": "twse", "close": 11.46, "pct": 4.95, "etf": true, "lots": 198702, "amount": 22.77}, {"code": "00937B", "name": "群益ESG投等債20+", "market": "tpex", "close": 14.47, "pct": -0.55, "etf": true, "lots": 115123, "amount": 16.66}, {"code": "00953B", "name": "群益優選非投等債", "market": "twse", "close": 9.67, "pct": -0.1, "etf": true, "lots": 71749, "amount": 6.94}, {"code": "00679B", "name": "元大美債20年", "market": "tpex", "close": 26.89, "pct": -0.37, "etf": true, "lots": 59481, "amount": 15.99}, {"code": "00712", "name": "復華富時不動產", "market": "twse", "close": 7.22, "pct": -2.04, "etf": true, "lots": 51852, "amount": 3.74}, {"code": "00673R", "name": "期元大S&P原油反1", "market": "twse", "close": 10.44, "pct": -4.57, "etf": true, "lots": 49018, "amount": 5.12}, {"code": "00687B", "name": "國泰20年美債", "market": "tpex", "close": 27.94, "pct": -0.39, "etf": true, "lots": 47632, "amount": 13.31}, {"code": "00664R", "name": "國泰臺灣加權反1", "market": "twse", "close": 1.84, "pct": 3.95, "etf": true, "lots": 32756, "amount": 0.6}, {"code": "00680L", "name": "元大美債20正2", "market": "twse", "close": 6.45, "pct": -0.62, "etf": true, "lots": 27918, "amount": 1.8}, {"code": "00984D", "name": "主動聯博全球非投", "market": "twse", "close": 9.75, "pct": -0.2, "etf": true, "lots": 24539, "amount": 2.39}]}, "sell": {"amount": [{"code": "0050", "name": "元大台灣50", "market": "twse", "close": 92.5, "pct": -4.79, "etf": true, "lots": -537978, "amount": -497.63}, {"code": "2330", "name": "台積電", "market": "twse", "close": 2135.0, "pct": -4.69, "etf": false, "lots": -9473, "amount": -202.25}, {"code": "00631L", "name": "元大台灣50正2", "market": "twse", "close": 26.3, "pct": -9.96, "etf": true, "lots": -466015, "amount": -122.56}, {"code": "2454", "name": "聯發科", "market": "twse", "close": 3390.0, "pct": -2.02, "etf": false, "lots": -3225, "amount": -109.33}, {"code": "00685L", "name": "群益臺灣加權正2", "market": "twse", "close": 8.56, "pct": -9.89, "etf": true, "lots": -649678, "amount": -55.61}, {"code": "0056", "name": "元大高股息", "market": "twse", "close": 49.91, "pct": -3.18, "etf": true, "lots": -94154, "amount": -46.99}, {"code": "3711", "name": "日月光投控", "market": "twse", "close": 527.0, "pct": -7.87, "etf": false, "lots": -8019, "amount": -42.26}, {"code": "009816", "name": "凱基台灣TOP50", "market": "twse", "close": 13.88, "pct": -4.47, "etf": true, "lots": -300900, "amount": -41.76}, {"code": "00406A", "name": "主動中信台灣收益", "market": "twse", "close": 6.85, "pct": -6.93, "etf": true, "lots": -547663, "amount": -37.51}, {"code": "3037", "name": "欣興", "market": "twse", "close": 727.0, "pct": -9.12, "etf": false, "lots": -4893, "amount": -35.57}], "lots": [{"code": "00685L", "name": "群益臺灣加權正2", "market": "twse", "close": 8.56, "pct": -9.89, "etf": true, "lots": -649678, "amount": -55.61}, {"code": "00406A", "name": "主動中信台灣收益", "market": "twse", "close": 6.85, "pct": -6.93, "etf": true, "lots": -547663, "amount": -37.51}, {"code": "0050", "name": "元大台灣50", "market": "twse", "close": 92.5, "pct": -4.79, "etf": true, "lots": -537978, "amount": -497.63}, {"code": "00631L", "name": "元大台灣50正2", "market": "twse", "close": 26.3, "pct": -9.96, "etf": true, "lots": -466015, "amount": -122.56}, {"code": "009816", "name": "凱基台灣TOP50", "market": "twse", "close": 13.88, "pct": -4.47, "etf": true, "lots": -300900, "amount": -41.76}, {"code": "00981A", "name": "主動統一台股增長", "market": "twse", "close": 21.46, "pct": -6.9, "etf": true, "lots": -145747, "amount": -31.28}, {"code": "00403A", "name": "主動統一升級50", "market": "twse", "close": 8.0, "pct": -5.44, "etf": true, "lots": -111060, "amount": -8.88}, {"code": "00878", "name": "國泰永續高股息", "market": "twse", "close": 31.99, "pct": -3.15, "etf": true, "lots": -107547, "amount": -34.4}, {"code": "0056", "name": "元大高股息", "market": "twse", "close": 49.91, "pct": -3.18, "etf": true, "lots": -94154, "amount": -46.99}, {"code": "00919", "name": "群益台灣精選高息", "market": "twse", "close": 30.14, "pct": -3.37, "etf": true, "lots": -63435, "amount": -19.12}]}}}, "us": [{"symbol": "^SOX", "name": "費城半導體", "kind": "index", "date": "2026-11-05", "close": 9011.1396, "change": -1257.5107, "pct": -12.25}, {"symbol": "^IXIC", "name": "那斯達克", "kind": "index", "date": "2026-11-05", "close": 24315.0, "change": -1421.5098, "pct": -5.52}, {"symbol": "TSM", "name": "台積電 ADR", "kind": "stock", "date": "2026-11-05", "close": 353.1, "change": -42.65, "pct": -10.78}, {"symbol": "NVDA", "name": "輝達", "kind": "stock", "date": "2026-11-05", "close": 181.6, "change": -18.53, "pct": -9.26}, {"symbol": "AMD", "name": "超微", "kind": "stock", "date": "2026-11-05", "close": 404.4, "change": -84.38, "pct": -17.26}, {"symbol": "AVGO", "name": "博通", "kind": "stock", "date": "2026-11-05", "close": 291.53, "change": -33.95, "pct": -10.43}, {"symbol": "MU", "name": "美光", "kind": "stock", "date": "2026-11-05", "close": 656.39, "change": -138.84, "pct": -17.46}, {"symbol": "AAPL", "name": "蘋果", "kind": "stock", "date": "2026-11-05", "close": 344.17, "change": -5.34, "pct": -1.53}, {"symbol": "MSFT", "name": "微軟", "kind": "stock", "date": "2026-11-05", "close": 535.93, "change": -19.87, "pct": -3.58}, {"symbol": "TWD=X", "name": "美元/台幣", "kind": "fx", "date": "2026-11-06", "close": 32.801, "change": -0.0202, "pct": -0.06}, {"symbol": "^TNX", "name": "美債 10 年殖利率", "kind": "yield", "date": "2026-11-05", "close": 4.837, "change": -0.057, "pct": -1.16}, {"symbol": "^VIX", "name": "VIX 恐慌指數", "kind": "index", "date": "2026-11-05", "close": 28.18, "change": 11.57, "pct": 69.66}], "margin": {"tw": {"date": "2026-11-05", "balance": 5764.09, "change": -205.37, "lots": 9440455.0, "maintenance": 155.73, "history": [{"d": "2026-10-07", "v": 6400.01}, {"d": "2026-10-08", "v": 6464.06}, {"d": "2026-10-12", "v": 6533.3}, {"d": "2026-10-13", "v": 6449.79}, {"d": "2026-10-14", "v": 6515.67}, {"d": "2026-10-15", "v": 6464.15}, {"d": "2026-10-16", "v": 6455.94}, {"d": "2026-10-19", "v": 6406.18}, {"d": "2026-10-20", "v": 6381.0}, {"d": "2026-10-21", "v": 6443.74}, {"d": "2026-10-22", "v": 6338.8}, {"d": "2026-10-27", "v": 6233.87}, {"d": "2026-10-28", "v": 6323.0}, {"d": "2026-10-29", "v": 6339.11}, {"d": "2026-10-30", "v": 6234.68}, {"d": "2026-11-02", "v": 6226.99}, {"d": "2026-11-03", "v": 5997.74}, {"d": "2026-11-04", "v": 5969.46}, {"d": "2026-11-05", "v": 5764.09}]}, "us": {"date": "2026-09", "balance": 1480054.0, "mom": 1.8, "yoy": 31.39, "history": [{"d": "2024-10", "v": 815369.0}, {"d": "2024-11", "v": 890852.0}, {"d": "2024-12", "v": 899168.0}, {"d": "2025-01", "v": 937253.0}, {"d": "2025-02", "v": 918144.0}, {"d": "2025-03", "v": 880316.0}, {"d": "2025-04", "v": 850558.0}, {"d": "2025-05", "v": 920960.0}, {"d": "2025-06", "v": 1007961.0}, {"d": "2025-07", "v": 1022548.0}, {"d": "2025-08", "v": 1059723.0}, {"d": "2025-09", "v": 1126494.0}, {"d": "2025-10", "v": 1183654.0}, {"d": "2025-11", "v": 1214321.0}, {"d": "2025-12", "v": 1225597.0}, {"d": "2026-01", "v": 1279042.0}, {"d": "2026-02", "v": 1253192.0}, {"d": "2026-03", "v": 1220922.0}, {"d": "2026-04", "v": 1304281.0}, {"d": "2026-05", "v": 1415557.0}, {"d": "2026-06", "v": 1502072.0}, {"d": "2026-07", "v": 1417225.0}, {"d": "2026-08", "v": 1453832.0}, {"d": "2026-09", "v": 1480054.0}]}, "jp": {"date": "2026-10-30", "balance": 6505887.0, "change": -28183.0, "sell": 643859.0, "ratio": 10.47, "history": [{"d": "2026-10-02", "v": 6523552.0}, {"d": "2026-10-09", "v": 6708057.0}, {"d": "2026-10-16", "v": 6664007.0}, {"d": "2026-10-23", "v": 6534069.0}, {"d": "2026-10-30", "v": 6505887.0}]}}, "missing": []}</script>
+<script id="report-dates" type="application/json">["2026-11-06", "2026-11-05", "2026-11-04", "2026-11-03", "2026-11-02", "2026-10-30"]</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("report-data").textContent);
+const DATES = JSON.parse(document.getElementById("report-dates").textContent);
+const $ = (s) => document.querySelector(s);
+// 透過本機伺服器開啟（http://127.0.0.1:8765）時，才能新增／刪除自選股與自動更新
+const SERVER = ["127.0.0.1", "localhost"].includes(location.hostname);
+const WEB = location.protocol.startsWith("http") && !SERVER;   // GitHub Pages 等網站上的唯讀版
+const IS_LATEST = D.date === DATES[0];
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* ───────── 偏好設定（存在瀏覽器，讀不到也不影響顯示） ───────── */
+// 瀏覽器不允許儲存時（無痕模式等），改存在記憶體，這次開啟期間仍可正常切換
+const memory = {};
+const store = {
+  get(k, d) {
+    if (k in memory) return memory[k];
+    try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; }
+  },
+  set(k, v) { memory[k] = v; try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+/* ───────── 格式化 ───────── */
+const fmt = (v, dg = 0) => v == null || isNaN(v) ? "—" : Number(v).toLocaleString("zh-TW", { minimumFractionDigits: dg, maximumFractionDigits: dg });
+const sgn = (v, dg = 0) => v == null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v), dg);
+const cls = (v) => v > 0 ? "up" : v < 0 ? "down" : "flat";
+const arrow = (v) => v > 0 ? "▲" : v < 0 ? "▼" : "－";
+const priceDg = (p) => p >= 1000 ? 0 : p >= 100 ? 1 : 2;
+const wk = (iso) => "日一二三四五六"[new Date(iso + "T00:00:00").getDay()];
+const md = (iso) => iso.slice(5).replace("-", "/");
+const streakText = (n, who) => !n ? "" : `${who}連${Math.abs(n)}${Math.abs(n) >= 20 ? "+" : ""}${n > 0 ? "買" : "賣"}`;
+
+/* ───────── 頂部 ───────── */
+function renderTop() {
+  const missing = D.missing || [];
+  $("#status").classList.toggle("warn", missing.length > 0);
+  $("#status-text").textContent = missing.length ? `缺 ${missing.length} 項：${missing.join("、")}` : "資料完整";
+  $("#meta").textContent = `交易日 ${D.date.replaceAll("-", "/")}（週${wk(D.date)}） · 更新於 ${D.generated_at.replace("T", " ").slice(0, 16)}`;
+  $("#gen").textContent = `本頁產生時間：${D.generated_at.replace("T", " ")}`;
+  const sel = $("#date-select");
+  sel.innerHTML = DATES.map((d) => `<option value="${d}" ${d === D.date ? "selected" : ""}>${d.replaceAll("-", "/")}（${wk(d)}）</option>`).join("");
+  sel.onchange = () => {
+    if (SERVER) location.href = sel.value === DATES[0] ? "/" : "/r/" + sel.value;
+    else location.href = sel.value + ".html";
+  };
+}
+
+/* ───────── 跑馬燈 ───────── */
+const US = D.us || [];
+const usBy = (sym) => US.find((u) => u.symbol === sym);
+function tsmPremium() {
+  const adr = usBy("TSM"), fx = usBy("TWD=X"), tw = (D.stocks || []).find((s) => s.code === "2330");
+  if (!adr || !fx || !tw?.close) return null;
+  return (adr.close * fx.close / 5 / tw.close - 1) * 100;   // 1 股 ADR = 5 股台積電
+}
+function usValue(u) {
+  if (u.kind === "fx") return { v: fmt(u.close, 3), c: `${sgn(u.change, 3)}`, note: u.change > 0 ? "台幣貶值" : u.change < 0 ? "台幣升值" : "" };
+  if (u.kind === "yield") return { v: fmt(u.close, 3) + "%", c: `${sgn(u.change * 100, 1)} bps` };
+  if (u.kind === "stock") return { v: "$" + fmt(u.close, 2), c: `${sgn(u.pct, 2)}%` };
+  return { v: fmt(u.close, 2), c: `${sgn(u.change, 2)}（${sgn(u.pct, 2)}%）` };
+}
+function renderTicker() {
+  const items = [];
+  const fut = D.futures;
+  if (fut) items.push(`<span class="it"><span class="n">台指期近月</span><b class="num">${fmt(fut.close)}</b><span class="num ${fut.change >= 0 ? "u" : "d"}">${sgn(fut.change)}</span></span>`);
+  US.forEach((u) => {
+    const x = usValue(u);
+    items.push(`<span class="it"><span class="n">${esc(u.name)}</span><b class="num">${x.v}</b><span class="num ${u.change >= 0 ? "u" : "d"}">${x.c}</span>${x.note ? `<span class="note">${x.note}</span>` : ""}</span>`);
+    if (u.symbol === "TSM") {
+      const p = tsmPremium();
+      if (p != null) items.push(`<span class="it"><span class="n">ADR 換算溢價</span><b class="num">${sgn(p, 2)}%</b><span class="note">相對台積電今日收盤</span></span>`);
+    }
+  });
+  if (!items.length) { $("#ticker").style.display = "none"; return; }
+  const belt = $("#belt");
+  belt.innerHTML = items.join("") + `<span class="dup">${items.join("")}</span>`;
+  belt.style.setProperty("--dur", Math.max(25, items.length * 4) + "s");
+  const usDate = US.find((u) => u.kind !== "fx")?.date;
+  $("#ticker-when").textContent = usDate ? `美股 ${md(usDate)} 收盤` : "";
+}
+
+/* ───────── 摘要文字（畫面與「複製」共用） ───────── */
+function buildSummary() {
+  const m = D.market, inst = D.institutions, fut = D.futures, fi = D.fut_inst, opt = D.options;
+  const stocks = (D.stocks || []).filter((s) => s.close != null);
+  const headline = `加權指數收 ${fmt(m.close, 2)}，${m.change >= 0 ? "上漲" : "下跌"} ${fmt(Math.abs(m.change), 2)} 點（${sgn(m.pct, 2)}%），成交 ${fmt(m.turnover, 0)} 億元` +
+    (m.turnover_avg5 ? `，${m.turnover >= m.turnover_avg5 ? "高於" : "低於"}前 5 日均量 ${fmt(m.turnover_avg5, 0)} 億。` : "。");
+  const bullets = [];
+  const sox = usBy("^SOX"), tsm = usBy("TSM"), fx = usBy("TWD=X");
+  if (sox || tsm) {
+    const parts = [sox && `費半 ${sgn(sox.pct, 2)}%`, tsm && `台積電 ADR ${sgn(tsm.pct, 2)}%`,
+      ...["NVDA", "AMD", "AVGO"].map(usBy).filter(Boolean).map((u) => `${u.name} ${sgn(u.pct, 2)}%`)].filter(Boolean);
+    const prem = tsmPremium();
+    bullets.push(`昨夜美股（${md((sox || tsm).date)}）：${parts.join("、")}` + (prem != null ? `；ADR 換算溢價 ${sgn(prem, 2)}%` : "") +
+      (fx ? `；美元/台幣 ${fmt(fx.close, 3)}（${fx.change > 0 ? "台幣貶值" : fx.change < 0 ? "台幣升值" : "持平"}）。` : "。"));
+  }
+  const M = D.margin || {};
+  const mParts = [];
+  if (M.tw) mParts.push(`台股融資餘額 ${fmt(M.tw.balance, 1)} 億（${sgn(M.tw.change, 1)} 億${M.tw.maintenance ? `，維持率 ${fmt(M.tw.maintenance, 2)}%` : ""}）`);
+  if (M.jp) mParts.push(`日股信用買殘 ${fmt(M.jp.balance / 1e6, 2)} 兆日圓（信用倍率 ${fmt(M.jp.ratio, 2)} 倍）`);
+  if (M.us) mParts.push(`美股融資 ${fmt(M.us.balance / 1e6, 2)} 兆美元（年增 ${sgn(M.us.yoy, 1)}%）`);
+  const marginLine = mParts.length ? `融資：${mParts.join("；")}。` : null;
+  if (inst) {
+    const t = inst.today;
+    bullets.push(`三大法人合計${t.total >= 0 ? "買超" : "賣超"} ${fmt(Math.abs(t.total), 1)} 億：外資 ${sgn(t.foreign, 1)} 億${inst.foreign_streak ? `（${streakText(inst.foreign_streak, "")}）` : ""}、投信 ${sgn(t.trust, 1)} 億${inst.trust_streak ? `（${streakText(inst.trust_streak, "")}）` : ""}、自營商 ${sgn(t.dealer_self + t.dealer_hedge, 1)} 億。`);
+  }
+  const R = D.inst_rank;
+  if (R) {
+    const names = (side) => (R.foreign?.[side]?.amount || []).slice(0, 3).map((i) => i.name).join("、");
+    const tn = (side) => (R.trust?.[side]?.amount || []).slice(0, 3).map((i) => i.name).join("、");
+    bullets.push(`外資買超前三：${names("buy") || "—"}；賣超前三：${names("sell") || "—"}。投信買超前三：${tn("buy") || "—"}。`);
+  }
+  if (fut) bullets.push(`台指期近月（${fut.contract}）收 ${fmt(fut.close)}，${fut.basis >= 0 ? "正" : "逆"}價差 ${fmt(Math.abs(fut.basis), 0)} 點。`);
+  if (fi) bullets.push(`外資台指期淨${fi.today.foreign < 0 ? "空單" : "多單"} ${fmt(Math.abs(fi.today.foreign))} 口` +
+    (fi.foreign_change != null ? `，較前一日${fi.foreign_change < 0 ? "淨空增加（或淨多減少）" : "淨空減少（或淨多增加）"} ${fmt(Math.abs(fi.foreign_change))} 口。` : "。"));
+  if (opt) bullets.push(`選擇權：上方買權最大未平倉 ${fmt(opt.call_wall.k)}、下方賣權最大未平倉 ${fmt(opt.put_wall.k)}；` +
+    `${md(opt.nearest.expiry)} 到期合約最大痛點 ${fmt(opt.nearest.max_pain)}${opt.monthly ? `、月選（${md(opt.monthly.expiry)}）${fmt(opt.monthly.max_pain)}` : ""}；P/C 未平倉比 ${fmt(opt.pc_oi, 2)}%。`);
+  if (marginLine) bullets.push(marginLine);
+  if (stocks.length) {
+    const up = stocks.filter((s) => s.change > 0).length, dn = stocks.filter((s) => s.change < 0).length;
+    const best = stocks.reduce((a, b) => (b.pct > a.pct ? b : a)), worst = stocks.reduce((a, b) => (b.pct < a.pct ? b : a));
+    bullets.push(`自選 ${stocks.length} 檔：上漲 ${up}、下跌 ${dn}、平盤 ${stocks.length - up - dn}；最強 ${best.name} ${sgn(best.pct, 2)}%，最弱 ${worst.name} ${sgn(worst.pct, 2)}%。`);
+    const flagged = stocks.filter((s) => s.signals?.some((x) => /漲停|跌停|新高|新低|爆量|站上|跌破/.test(x)));
+    if (flagged.length) bullets.push("值得留意：" + flagged.slice(0, 6).map((s) => `${s.name}（${s.signals.filter((x) => /漲停|跌停|新高|新低|爆量|站上|跌破/.test(x)).join("、")}）`).join("；") + "。");
+  }
+  return { headline, bullets };
+}
+
+function renderHero() {
+  const { headline, bullets } = buildSummary();
+  const m = D.market, opt = D.options, fut = D.futures;
+  $("#b-close").textContent = fmt(m.close, 2);
+  $("#b-chg").className = "chg num " + (m.change >= 0 ? "u" : "d");
+  $("#b-chg").textContent = `${arrow(m.change)} ${sgn(m.change, 2)}　${sgn(m.pct, 2)}%`;
+  const tail = [];
+  if (D.institutions) tail.push(`外資現貨 ${sgn(D.institutions.today.foreign, 1)} 億`);
+  if (D.fut_inst) tail.push(`外資期貨淨${D.fut_inst.today.foreign < 0 ? "空" : "多"} ${fmt(Math.abs(D.fut_inst.today.foreign))} 口`);
+  if (opt) tail.push(`壓力 ${fmt(opt.call_wall.k)}／支撐 ${fmt(opt.put_wall.k)}`);
+  $("#headline").innerHTML = esc(headline) + (tail.length ? `<br><span style="opacity:.8;font-size:14px;font-weight:500">${esc(tail.join("　·　"))}</span>` : "");
+  $("#bullets").innerHTML = bullets.map((b) => `<li>${esc(b)}</li>`).join("");
+
+  const lv = [];
+  if (opt) {
+    lv.push({ k: opt.call_wall.k, name: "壓力", note: `買權最大未平倉 ${fmt(opt.call_wall.oi)} 口`, cls: "res" });
+    lv.push({ k: opt.put_wall.k, name: "支撐", note: `賣權最大未平倉 ${fmt(opt.put_wall.oi)} 口`, cls: "sup" });
+    lv.push({ k: opt.nearest.max_pain, name: "最大痛點", note: `${opt.nearest.contract}（${md(opt.nearest.expiry)} 到期）` });
+    if (opt.monthly && opt.monthly.contract !== opt.nearest.contract) lv.push({ k: opt.monthly.max_pain, name: "月選痛點", note: `${opt.monthly.contract}（${md(opt.monthly.expiry)} 到期）` });
+  }
+  if (m.ma20) lv.push({ k: m.ma20, name: "月線", note: "加權指數 20 日均線" });
+  if (m.ma60) lv.push({ k: m.ma60, name: "季線", note: "加權指數 60 日均線" });
+  if (fut) lv.push({ k: fut.close, name: "台指期", note: `近月收盤（${fut.basis >= 0 ? "正" : "逆"}價差 ${fmt(Math.abs(fut.basis))}）`, cls: "price" });
+  lv.push({ k: m.close, name: "加權收盤", note: `${sgn(m.change, 2)} 點`, cls: "price" });
+  lv.sort((a, b) => b.k - a.k);
+  const lo = Math.min(...lv.map((x) => x.k)), hi = Math.max(...lv.map((x) => x.k));
+  $("#ladder").innerHTML = lv.map((x) => {
+    const diff = (x.k - m.close) / m.close * 100;
+    const pct = x.cls === "price" && x.name === "加權收盤" ? "基準" : sgn(diff, 1) + "%";
+    return `<div class="lv2 ${x.cls || ""}"><b>${fmt(x.k)}</b><span>${esc(x.name)}<small>${esc(x.note)}</small></span><span class="pct">${pct}</span></div>`;
+  }).join("");
+  const ma20d = m.ma20 ? (m.close - m.ma20) / m.ma20 * 100 : null;
+  $("#b-stats").innerHTML = [
+    ["成交", fmt(m.turnover, 0) + " 億"],
+    ["5 日均量", m.turnover_avg5 ? fmt(m.turnover_avg5, 0) + " 億" : "—"],
+    ["月線乖離", `<span class="${cls(ma20d)}">${sgn(ma20d, 2)}%</span>`],
+    ["台指期", fut ? `${fmt(fut.close)}（${fut.basis >= 0 ? "正" : "逆"}價差 ${fmt(Math.abs(fut.basis))}）` : "—"],
+  ].map(([k, v]) => `<span>${k}</span><span>${v}</span>`).join("");
+  $("#ladder-note").textContent = "由高到低，% 為與加權收盤的距離";
+}
+
+/* ───────── KPI ───────── */
+function renderKpis() {
+  const m = D.market, fut = D.futures, fi = D.fut_inst, inst = D.institutions;
+  // 迷你走勢圖：面積 + 線，顏色依最後一天相對第一天的方向
+  const ks = (vals, label) => {
+    vals = (vals || []).filter((v) => v != null);
+    if (vals.length < 2) return "";
+    const W = 300, H = 44, lo = Math.min(...vals), hi = Math.max(...vals);
+    const pts = vals.map((v, i) => [i / (vals.length - 1) * W, hi === lo ? H / 2 : 4 + (1 - (v - lo) / (hi - lo)) * (H - 8)]);
+    const color = vals[vals.length - 1] >= vals[0] ? "var(--up)" : "var(--down)";
+    const id = "g" + Math.random().toString(36).slice(2, 8);
+    const line = pts.map((p) => p.map((n) => n.toFixed(1)).join(",")).join(" ");
+    return `<div class="ks" title="${esc(label)}"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".28"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+      <polygon points="0,${H} ${line} ${W},${H}" fill="url(#${id})"/>
+      <polyline points="${line}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg></div>`;
+  };
+  const card = (label, big, chg, foot, dir, spark = "") => `<div class="card kpi ${dir > 0 ? "k-up" : dir < 0 ? "k-down" : ""}"><div class="label">${label}</div><div class="big num">${big}</div><div class="chg num">${chg}</div>${spark}<div class="foot num">${foot}</div></div>`;
+  const na = (label) => card(label, "—", `<span class="sub">資料尚未公布</span>`, "", 0);
+  const ma20d = m.ma20 ? (m.close - m.ma20) / m.ma20 * 100 : null;
+  let html = card("加權指數", fmt(m.close, 2),
+    `<span class="${cls(m.change)}">${arrow(m.change)} ${sgn(m.change, 2)}（${sgn(m.pct, 2)}%）</span>`,
+    `<span>成交 ${fmt(m.turnover, 0)} 億</span><span>月線乖離 <b class="${cls(ma20d)}">${sgn(ma20d, 2)}%</b></span>`,
+    m.change, ks(m.series.slice(-20).map((r) => r.close), "近 20 日收盤"));
+  html += fut ? card(`台指期近月 ${fut.contract}`, fmt(fut.close),
+    `<span class="${cls(fut.change)}">${arrow(fut.change)} ${sgn(fut.change)}</span>`,
+    `<span>${fut.basis >= 0 ? "正" : "逆"}價差 <b>${fmt(Math.abs(fut.basis), 0)}</b> 點</span><span>未平倉 ${fmt(fut.oi)} 口</span>`,
+    fut.change, `<div class="ks num" style="display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--text2)"><span>開 ${fmt(fut.open)}</span><span>高 <b class="up">${fmt(fut.high)}</b></span><span>低 <b class="down">${fmt(fut.low)}</b></span></div>`) : na("台指期近月");
+  html += fi ? card("外資台指期淨未平倉", `${sgn(fi.today.foreign)} <span class="sub">口</span>`,
+    fi.foreign_change != null ? `<span class="${cls(fi.foreign_change)}">較前日 ${sgn(fi.foreign_change)} 口</span>` : "",
+    `<span>投信 ${sgn(fi.today.trust)}</span><span>自營商 ${sgn(fi.today.dealer)}</span>`,
+    fi.foreign_change, ks(fi.history.map((r) => r.foreign), "近 20 日外資淨未平倉")) : na("外資台指期淨未平倉");
+  html += inst ? card("三大法人現貨", `${sgn(inst.today.total, 1)} <span class="sub">億</span>`,
+    `<span class="${cls(inst.today.foreign)}">外資 ${sgn(inst.today.foreign, 1)} 億</span> <span class="sub">${streakText(inst.foreign_streak, "")}</span>`,
+    `<span>投信 <b class="${cls(inst.today.trust)}">${sgn(inst.today.trust, 1)}</b>${inst.trust_streak ? `（${streakText(inst.trust_streak, "")}）` : ""}</span><span>自營 <b class="${cls(inst.today.dealer_self + inst.today.dealer_hedge)}">${sgn(inst.today.dealer_self + inst.today.dealer_hedge, 1)}</b></span>`,
+    inst.today.total, ks(inst.history.map((r) => r.total), "近 20 日三大法人合計")) : na("三大法人現貨");
+  $("#kpis").innerHTML = html;
+}
+
+/* ───────── 三大法人買賣超排行 ───────── */
+const WHO = [["foreign", "外資"], ["trust", "投信"], ["dealer", "自營商"], ["total", "三大合計"]];
+const rankState = { who: store.get("tw.rankWho", "foreign"), by: store.get("tw.rankBy", "amount") };
+function renderRanking() {
+  const R = D.inst_rank;
+  if (!R) { $("#rank-sec").style.display = "none"; return; }
+  const seg = (el, opts, key, saveKey) => {
+    el.innerHTML = opts.map(([k, l]) => `<button data-k="${k}" class="${rankState[key] === k ? "on" : ""}">${l}</button>`).join("");
+    el.querySelectorAll("button").forEach((b) => b.onclick = () => { rankState[key] = b.dataset.k; store.set(saveKey, b.dataset.k); renderRanking(); });
+  };
+  seg($("#rank-who"), WHO, "who", "tw.rankWho");
+  seg($("#rank-by"), [["amount", "依金額"], ["lots", "依張數"]], "by", "tw.rankBy");
+  const held = new Set((D.stocks || []).map((s) => s.code));
+  const list = (side) => {
+    const items = R[rankState.who]?.[side]?.[rankState.by] || [];
+    if (!items.length) return `<div class="empty">沒有資料</div>`;
+    const key = rankState.by === "amount" ? "amount" : "lots";
+    const max = Math.max(...items.map((i) => Math.abs(i[key]))) || 1;
+    const bar = side === "buy" ? "var(--up)" : "var(--down)";
+    return items.map((i, n) => `<div class="rk" style="--w:${(Math.abs(i[key]) / max * 100).toFixed(1)}%;--bar:${bar}">
+      <span class="no">${n + 1}</span>
+      <div class="nm"><b>${esc(i.code)} ${esc(i.name)}</b>${i.etf ? '<span class="tagx">ETF</span>' : ""}${i.market === "tpex" ? '<span class="tagx">上櫃</span>' : ""}
+        <span class="g num">收 ${fmt(i.close, priceDg(i.close))}　<span class="${cls(i.pct)}">${sgn(i.pct, 2)}%</span></span></div>
+      <div class="val num"><b class="${cls(i.lots)}">${sgn(i.amount, 2)} 億</b><span>${sgn(i.lots)} 張</span></div>
+      ${held.has(i.code) ? `<span class="held" title="已在自選股">★</span>` : CAN_EDIT ? `<button class="add" data-add="${esc(i.code)}" title="加入自選股" aria-label="把 ${esc(i.name)} 加入自選股">＋</button>` : "<span></span>"}
+    </div>`).join("");
+  };
+  $("#rank-buy").innerHTML = list("buy");
+  $("#rank-sell").innerHTML = list("sell");
+  document.querySelectorAll("[data-add]").forEach((b) => b.onclick = () => { b.disabled = true; b.textContent = "…"; addStock(b.dataset.add); });
+}
+
+/* ───────── 美日台融資 ───────── */
+function miniArea(vals) {
+  vals = (vals || []).filter((v) => v != null);
+  if (vals.length < 2) return "";
+  const W = 300, H = 40, lo = Math.min(...vals), hi = Math.max(...vals);
+  const pts = vals.map((v, i) => `${(i / (vals.length - 1) * W).toFixed(1)},${(hi === lo ? H / 2 : 3 + (1 - (v - lo) / (hi - lo)) * (H - 6)).toFixed(1)}`).join(" ");
+  const id = "m" + Math.random().toString(36).slice(2, 8);
+  return `<div class="ks"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:40px;display:block" aria-hidden="true">
+    <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--c1)" stop-opacity=".3"/><stop offset="1" stop-color="var(--c1)" stop-opacity="0"/></linearGradient></defs>
+    <polygon points="0,${H} ${pts} ${W},${H}" fill="url(#${id})"/><polyline points="${pts}" fill="none" stroke="var(--c1)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></div>`;
+}
+function renderMargin() {
+  const M = D.margin || {};
+  if (!M.tw && !M.us && !M.jp) { $("#margin-sec").style.display = "none"; return; }
+  const cards = [];
+  const box = (flag, cls2, title, when, big, chg, spark, facts) => `<div class="mg" data-flag="${flag}">
+    <div class="mg-head"><span class="flag ${cls2}">${flag}</span><div><b>${title}</b><div class="sub">${when}</div></div></div>
+    <div class="big num">${big}</div><div class="chg num">${chg}</div>${spark}<div class="facts num">${facts}</div></div>`;
+  if (M.tw) {
+    const t = M.tw, mt = t.maintenance;
+    const lo = 120, hi = 200, pos = (v) => Math.max(0, Math.min(100, (v - lo) / (hi - lo) * 100));
+    cards.push(box("TW", "tw", "台股融資（上市）", `每日 · 資料日 ${md(t.date)}${t.date !== D.date ? "（今日尚未公布）" : ""}`,
+      `${fmt(t.balance, 1)} <span class="sub">億元</span>`,
+      `<span class="${cls(t.change)}">較前日 ${sgn(t.change, 1)} 億</span>`,
+      miniArea(t.history.map((h) => h.v)),
+      (mt ? `<div><span>大盤融資維持率</span><b>${fmt(mt, 2)}%</b></div>
+        <div class="gauge" title="維持率越低代表融資戶壓力越大"><i style="left:${pos(mt)}%"></i><span style="left:${pos(130)}%">130% 追繳線</span><span style="left:${pos(160)}%">160%</span><span style="left:${pos(mt)}%;color:var(--text);font-weight:700;top:-18px">${fmt(mt, 1)}%</span></div>` : "") +
+      `<div><span>融資餘額張數</span><span>${fmt(t.lots)} 張</span></div>`));
+  }
+  if (M.jp) {
+    const j = M.jp;
+    cards.push(box("JP", "jp", "日股信用買殘（東京＋名古屋）", `每週 · ${md(j.date)} 當週`,
+      `${fmt(j.balance / 1e6, 2)} <span class="sub">兆日圓</span>`,
+      `<span class="${cls(j.change)}">較前週 ${sgn(j.change / 100, 0)} 億日圓</span>`,
+      miniArea(j.history.map((h) => h.v)),
+      `<div><span>信用倍率（買殘 ÷ 賣殘）</span><b>${fmt(j.ratio, 2)} 倍</b></div>
+       <div><span>信用賣殘</span><span>${fmt(j.sell / 1e6, 2)} 兆日圓</span></div>`));
+  }
+  if (M.us) {
+    const u = M.us;
+    cards.push(box("US", "us", "美股融資餘額（FINRA）", `每月 · ${u.date.replace("-", " 年 ")} 月`,
+      `$${fmt(u.balance / 1e6, 3)} <span class="sub">兆美元</span>`,
+      `<span class="${cls(u.mom)}">月增 ${sgn(u.mom, 2)}%</span>`,
+      miniArea(u.history.map((h) => h.v)),
+      `<div><span>年增率</span><b class="${cls(u.yoy)}">${sgn(u.yoy, 2)}%</b></div>
+       <div><span>近 24 個月高點</span><span>$${fmt(Math.max(...u.history.map((h) => h.v)) / 1e6, 3)} 兆</span></div>`));
+  }
+  $("#mg-grid").innerHTML = cards.join("");
+}
+
+/* ───────── 圖表工具 ───────── */
+const tip = $("#tip");
+function showTip(e, title, rows) {
+  tip.innerHTML = `<div class="t">${esc(title)}</div>` + rows.map(([k, v, c]) => `<div class="r"><span>${esc(k)}</span><b class="num ${c || ""}">${v}</b></div>`).join("");
+  tip.style.display = "block";
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + w > innerWidth - 8) x = e.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = e.clientY - h - 14;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+const hideTip = () => { tip.style.display = "none"; };
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+function niceTicks(lo, hi, n = 4) {
+  const span = hi - lo || 1, raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map((s) => s * mag).find((s) => span / s <= n) || 10 * mag;
+  const out = []; for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(6));
+  return out;
+}
+const kfmt = (v) => Math.abs(v) >= 10000 ? (v / 1000).toFixed(0) + "k" : fmt(v);
+
+/* 折線圖（含十字線與提示框） */
+function lineChart(el, { x, series, height = 200, yFmt = kfmt, tipRows, zero = false }) {
+  if (!x.length) { el.innerHTML = `<div class="empty">尚無資料</div>`; return; }
+  const W = 600, H = height, L = 48, R = 12, T = 12, B = 24;
+  const all = series.flatMap((s) => s.values.filter((v) => v != null));
+  let lo = Math.min(...all), hi = Math.max(...all);
+  if (zero) { lo = Math.min(lo, 0); hi = Math.max(hi, 0); }
+  const pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
+  const ticks = niceTicks(lo, hi);
+  const sx = (i) => L + (x.length === 1 ? 0.5 : i / (x.length - 1)) * (W - L - R);
+  const sy = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  const xs = Math.ceil(x.length / 6);
+  const xi = x.map((_, i) => i).filter((i) => (i % xs === 0 && x.length - 1 - i >= xs * 0.6) || i === x.length - 1);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img"><g class="axis">`;
+  ticks.forEach((t) => { svg += `<line x1="${L}" x2="${W - R}" y1="${sy(t)}" y2="${sy(t)}" stroke="var(--grid)"/><text x="${L - 6}" y="${sy(t) + 4}" text-anchor="end">${yFmt(t)}</text>`; });
+  xi.forEach((i) => { svg += `<text x="${sx(i)}" y="${H - 6}" text-anchor="middle">${md(x[i])}</text>`; });
+  svg += `</g>`;
+  series.forEach((s) => {
+    const pts = s.values.map((v, i) => v == null ? null : `${sx(i).toFixed(1)},${sy(v).toFixed(1)}`).filter(Boolean).join(" ");
+    svg += `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" ${s.dash ? 'stroke-dasharray="4 4"' : ""}/>`;
+  });
+  const last = x.length - 1, s0 = series[0];
+  svg += `<circle cx="${sx(last)}" cy="${sy(s0.values[last])}" r="4" fill="${s0.color}" stroke="var(--card)" stroke-width="2"/>`;
+  svg += `<line id="xh" y1="${T}" y2="${H - B}" stroke="var(--muted)" stroke-dasharray="3 3" visibility="hidden"/>`;
+  svg += `<g id="dots"></g><rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/></svg>`;
+  el.innerHTML = svg;
+  const svgEl = el.querySelector("svg"), xh = svgEl.querySelector("#xh"), dots = svgEl.querySelector("#dots");
+  svgEl.addEventListener("pointermove", (e) => {
+    const r = svgEl.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W;
+    const i = Math.max(0, Math.min(x.length - 1, Math.round((px - L) / (W - L - R) * (x.length - 1))));
+    xh.setAttribute("x1", sx(i)); xh.setAttribute("x2", sx(i)); xh.setAttribute("visibility", "visible");
+    dots.innerHTML = series.map((s) => s.values[i] == null ? "" : `<circle cx="${sx(i)}" cy="${sy(s.values[i])}" r="4" fill="${s.color}" stroke="var(--card)" stroke-width="2"/>`).join("");
+    showTip(e, `${x[i].replaceAll("-", "/")}（${wk(x[i])}）`, tipRows(i));
+  });
+  svgEl.addEventListener("pointerleave", () => { xh.setAttribute("visibility", "hidden"); dots.innerHTML = ""; hideTip(); });
+}
+
+/* 長條圖（可正負、可分組） */
+function barChart(el, { x, series, height = 200, width = 600, yFmt = kfmt, tipRows, labels = (v) => md(v), marker = null }) {
+  if (!x.length) { el.innerHTML = `<div class="empty">尚無資料</div>`; return; }
+  const W = width, H = height, L = 48, R = 12, T = 12, B = 24;
+  const all = series.flatMap((s) => s.values);
+  let lo = Math.min(0, ...all), hi = Math.max(0, ...all);
+  const pad = (hi - lo) * 0.06 || 1; if (lo < 0) lo -= pad; if (hi > 0) hi += pad;
+  const ticks = niceTicks(lo, hi);
+  const sy = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  const band = (W - L - R) / x.length, gap = Math.min(4, band * 0.2), bw = Math.max(1.5, (band - gap * 2) / series.length - (series.length > 1 ? 1 : 0));
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img"><g class="axis">`;
+  ticks.forEach((t) => { svg += `<line x1="${L}" x2="${W - R}" y1="${sy(t)}" y2="${sy(t)}" stroke="var(--grid)"/><text x="${L - 6}" y="${sy(t) + 4}" text-anchor="end">${yFmt(t)}</text>`; });
+  const step = Math.ceil(x.length / 7), lastI = x.length - 1;
+  // 最後一個標籤一定顯示，離它太近的標籤就省略，避免重疊
+  x.forEach((v, i) => { if ((i % step === 0 && lastI - i >= step * 0.6) || i === lastI) svg += `<text x="${L + band * (i + 0.5)}" y="${H - 6}" text-anchor="middle">${labels(v)}</text>`; });
+  svg += `</g><line x1="${L}" x2="${W - R}" y1="${sy(0)}" y2="${sy(0)}" stroke="var(--muted)"/>`;
+  if (marker) {
+    const mx = L + band * marker.pos;
+    svg += `<line x1="${mx}" x2="${mx}" y1="${T}" y2="${H - B}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/><text x="${mx + 4}" y="${T + 10}" fill="var(--accent)" font-size="11">${esc(marker.label)}</text>`;
+  }
+  x.forEach((_, i) => {
+    series.forEach((s, j) => {
+      const v = s.values[i], bx = L + band * i + gap + j * (bw + 1);
+      const y0 = sy(0), y1 = sy(v), h = Math.abs(y1 - y0);
+      if (h < 0.5) return;
+      const rx = Math.min(3, bw / 2);
+      // 只把遠離 0 軸的那一端做成圓角
+      const top = Math.min(y0, y1);
+      svg += v >= 0
+        ? `<path d="M${bx},${y0} V${top + rx} Q${bx},${top} ${bx + rx},${top} H${bx + bw - rx} Q${bx + bw},${top} ${bx + bw},${top + rx} V${y0} Z" fill="${s.color}"/>`
+        : `<path d="M${bx},${y0} V${y1 - rx} Q${bx},${y1} ${bx + rx},${y1} H${bx + bw - rx} Q${bx + bw},${y1} ${bx + bw},${y1 - rx} V${y0} Z" fill="${s.color}"/>`;
+    });
+    svg += `<rect data-i="${i}" x="${L + band * i}" y="${T}" width="${band}" height="${H - T - B}" fill="transparent"/>`;
+  });
+  svg += `</svg>`;
+  el.innerHTML = svg;
+  el.querySelectorAll("rect[data-i]").forEach((r) => {
+    r.addEventListener("pointermove", (e) => { const i = +r.dataset.i; r.setAttribute("fill", "color-mix(in srgb, var(--muted) 10%, transparent)"); showTip(e, tipRows(i).title, tipRows(i).rows); });
+    r.addEventListener("pointerleave", () => { r.setAttribute("fill", "transparent"); hideTip(); });
+  });
+}
+const legend = (items) => items.map(([name, color, line]) => `<span><i class="${line ? "line" : ""}" style="background:${color}"></i>${esc(name)}</span>`).join("");
+
+function renderCharts() {
+  const s = D.market.series, x = s.map((r) => r.d), closes = s.map((r) => r.close);
+  const ma20 = closes.map((_, i) => i >= 19 ? closes.slice(i - 19, i + 1).reduce((a, b) => a + b, 0) / 20 : null);
+  $("#lg-taiex").innerHTML = legend([["收盤", "var(--c1)", 1], ["20 日均線", "var(--muted)", 1]]);
+  lineChart($("#ch-taiex"), {
+    x, height: 220, yFmt: (v) => fmt(v),
+    series: [{ values: closes, color: css("--c1") }, { values: ma20, color: css("--muted"), dash: true }],
+    tipRows: (i) => [["收盤", fmt(closes[i], 2)], ["漲跌", sgn(s[i].change, 2), cls(s[i].change)], ["20 日均線", fmt(ma20[i], 0)], ["成交", fmt(s[i].turnover, 0) + " 億"]],
+  });
+  barChart($("#ch-turnover"), {
+    x, height: 90, series: [{ values: s.map((r) => r.turnover), color: css("--muted") }], yFmt: (v) => fmt(v),
+    tipRows: (i) => ({ title: `${x[i].replaceAll("-", "/")}（${wk(x[i])}）`, rows: [["成交金額", fmt(s[i].turnover, 0) + " 億"]] }),
+  });
+
+  const inst = D.institutions;
+  if (inst) {
+    const h = inst.history;
+    $("#lg-inst").innerHTML = legend([["外資", "var(--c1)"], ["投信", "var(--c2)"]]);
+    barChart($("#ch-inst"), {
+      x: h.map((r) => r.d), height: 260, yFmt: (v) => fmt(v),
+      series: [{ values: h.map((r) => r.foreign), color: css("--c1") }, { values: h.map((r) => r.trust), color: css("--c2") }],
+      tipRows: (i) => ({ title: `${h[i].d.replaceAll("-", "/")}（${wk(h[i].d)}）`, rows: [
+        ["外資", sgn(h[i].foreign, 1) + " 億", cls(h[i].foreign)], ["投信", sgn(h[i].trust, 1) + " 億", cls(h[i].trust)],
+        ["自營商", sgn(h[i].dealer_self + h[i].dealer_hedge, 1) + " 億", cls(h[i].dealer_self + h[i].dealer_hedge)], ["合計", sgn(h[i].total, 1) + " 億", cls(h[i].total)]] }),
+    });
+  } else $("#ch-inst").innerHTML = `<div class="empty">三大法人資料尚未公布</div>`;
+
+  const fi = D.fut_inst;
+  if (fi) {
+    const h = fi.history;
+    $("#fut-note").textContent = `近 ${h.length} 個交易日`;
+    lineChart($("#ch-futoi"), {
+      x: h.map((r) => r.d), height: 240, zero: false,
+      series: [{ values: h.map((r) => r.foreign), color: css("--c1") }],
+      tipRows: (i) => [["外資淨未平倉", sgn(h[i].foreign) + " 口"], ["較前日", i ? sgn(h[i].foreign - h[i - 1].foreign) + " 口" : "—", i ? cls(h[i].foreign - h[i - 1].foreign) : ""], ["投信", sgn(h[i].trust)], ["自營商", sgn(h[i].dealer)]],
+    });
+  } else $("#ch-futoi").innerHTML = `<div class="empty">期貨法人資料尚未公布</div>`;
+
+  const opt = D.options;
+  if (opt && opt.strikes.length) {
+    const st = opt.strikes, ref = D.futures?.close ?? D.market.close;
+    const pos = st.findIndex((s) => s.k >= ref);
+    $("#lg-opt").innerHTML = legend([["買權（往上）", "var(--c2)"], ["賣權（往下）", "var(--c1)"]]);
+    barChart($("#ch-opt"), {
+      x: st.map((s) => s.k), height: 300, width: 1200, labels: (v) => fmt(v),
+      series: [{ values: st.map((s) => s.c), color: css("--c2") }, { values: st.map((s) => -s.p), color: css("--c1") }],
+      yFmt: (v) => fmt(Math.abs(v)),
+      marker: pos >= 0 ? { pos: pos + (ref - (st[pos - 1]?.k ?? ref)) / ((st[pos].k - (st[pos - 1]?.k ?? st[pos].k)) || 1) - 0.5, label: `台指期 ${fmt(ref)}` } : null,
+      tipRows: (i) => ({ title: `履約價 ${fmt(st[i].k)}`, rows: [["買權未平倉", fmt(st[i].c) + " 口"], ["賣權未平倉", fmt(st[i].p) + " 口"], ["距台指期", sgn((st[i].k - ref) / ref * 100, 2) + "%"]] }),
+    });
+  } else $("#ch-opt").innerHTML = `<div class="empty">選擇權資料尚未公布</div>`;
+}
+
+/* ───────── 自選股表格 ───────── */
+const state = { filter: store.get("tw.filter", "all"), q: "", sort: store.get("tw.sort", { key: "pct", dir: -1 }) };
+const COLS = [
+  { key: "code", label: "代號／名稱" },
+  { key: "close", label: "收盤" },
+  { key: "pct", label: "漲跌幅" },
+  { key: "spark", label: "近 20 日", nosort: true },
+  { key: "vol_ratio", label: "量比" },
+  { key: "bias", label: "月線乖離" },
+  { key: "foreign", label: "外資" },
+  { key: "trust", label: "投信" },
+  { key: "signals", label: "訊號", nosort: true },
+];
+function spark(vals, up) {
+  if (!vals?.length) return "";
+  const w = 96, h = 28, p = 3, lo = Math.min(...vals), hi = Math.max(...vals);
+  const pts = vals.map((v, i) => [p + i / (vals.length - 1) * (w - 2 * p), hi === lo ? h / 2 : p + (1 - (v - lo) / (hi - lo)) * (h - 2 * p)]);
+  const color = up ? "var(--up)" : "var(--down)";
+  const [lx, ly] = pts[pts.length - 1];
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${pts.map((q) => q.map((n) => n.toFixed(1)).join(",")).join(" ")}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round"/><circle cx="${lx}" cy="${ly}" r="2.5" fill="${color}"/></svg>`;
+}
+const sigCls = (t) => /漲停|新高|站上|多頭|連\d+\+?買/.test(t) ? "up" : /跌停|新低|跌破|空頭|連\d+\+?賣/.test(t) ? "down" : "";
+function rows() {
+  let list = (D.stocks || []).map((s) => ({ ...s, bias: s.ma20 ? (s.close - s.ma20) / s.ma20 * 100 : null, foreign: s.inst?.foreign ?? null, trust: s.inst?.trust ?? null }));
+  if (state.filter !== "all") list = list.filter((s) => state.filter === "signal" ? s.signals?.length : s.tag === state.filter);
+  const q = state.q.trim().toLowerCase();
+  if (q) list = list.filter((s) => [s.code, s.name, s.group].join(" ").toLowerCase().includes(q));
+  const { key, dir } = state.sort;
+  list.sort((a, b) => {
+    const va = a[key], vb = b[key];
+    if (va == null) return 1; if (vb == null) return -1;
+    return (typeof va === "string" ? va.localeCompare(vb) : va - vb) * dir;
+  });
+  return list;
+}
+function renderFilters() {
+  const tags = [...new Set((D.stocks || []).map((s) => s.tag))];
+  const opts = [["all", `全部 ${D.stocks.length}`], ...tags.map((t) => [t, `${t} ${D.stocks.filter((s) => s.tag === t).length}`]), ["signal", `有訊號 ${D.stocks.filter((s) => s.signals?.length).length}`]];
+  if (!opts.some(([k]) => k === state.filter)) state.filter = "all";
+  $("#filters").innerHTML = opts.map(([k, l]) => `<button data-f="${esc(k)}" class="${k === state.filter ? "on" : ""}">${esc(l)}</button>`).join("");
+  $("#filters").querySelectorAll("button").forEach((b) => b.onclick = () => { state.filter = b.dataset.f; store.set("tw.filter", state.filter); renderFilters(); renderTable(); });
+}
+function renderTable() {
+  $("#thead").innerHTML = COLS.map((c) => `<th data-k="${c.key}" ${c.nosort ? 'style="cursor:default"' : ""}>${c.label}${state.sort.key === c.key ? (state.sort.dir > 0 ? " ↑" : " ↓") : ""}</th>`).join("");
+  $("#thead").querySelectorAll("th").forEach((th) => {
+    const c = COLS.find((x) => x.key === th.dataset.k);
+    if (c.nosort) return;
+    th.onclick = () => {
+      state.sort = state.sort.key === c.key ? { key: c.key, dir: -state.sort.dir } : { key: c.key, dir: c.key === "code" ? 1 : -1 };
+      store.set("tw.sort", state.sort); renderTable();
+    };
+  });
+  const list = rows();
+  if (!list.length) {
+    $("#tbody").innerHTML = `<tr><td colspan="${COLS.length}" class="empty">沒有符合條件的股票</td></tr>`;
+    $("#cards").innerHTML = `<div class="empty">沒有符合條件的股票</div>`;
+    return;
+  }
+  const inst = (v, n) => v == null ? "—" : `<b class="${cls(v)}">${sgn(v)}</b><span class="streak">${n ? streakText(n, "") : ""}</span>`;
+  const sigs = (s) => (s.signals || []).map((t) => `<span class="pill ${sigCls(t)}">${esc(t)}</span>`).join("") || `<span class="sub">—</span>`;
+  const del = (s) => CAN_EDIT ? `<button class="del" data-del="${esc(s.code)}" title="從自選股移除" aria-label="移除 ${esc(s.name)}">×</button>` : "";
+  const groupLine = (s) => [s.group, s.tag, s.market === "tpex" ? "上櫃" : ""].filter(Boolean).map(esc).join(" · ");
+  $("#tbody").innerHTML = list.map((s) => s.close == null ? `<tr data-code="${esc(s.code)}"><td class="name"><b>${esc(s.code)} ${esc(s.name)}</b>${del(s)}<span class="g">${esc(s.error || "今日無資料")}</span></td>${"<td>—</td>".repeat(COLS.length - 1)}</tr>` : `<tr data-code="${esc(s.code)}" class="${s.code === lastAdded ? "flash" : ""}">
+    <td class="name"><b>${esc(s.code)} ${esc(s.name)}</b>${del(s)}<span class="g">${groupLine(s)}</span></td>
+    <td class="num"><b>${fmt(s.close, priceDg(s.close))}</b></td>
+    <td class="num"><b class="${cls(s.change)}">${arrow(s.change)} ${sgn(s.pct, 2)}%</b><span class="streak">${sgn(s.change, priceDg(s.close))}</span></td>
+    <td>${spark(s.spark, s.spark?.length ? s.spark[s.spark.length - 1] >= s.spark[0] : true)}</td>
+    <td class="num">${s.vol_ratio == null ? "—" : fmt(s.vol_ratio, 2)}<span class="streak">${fmt(s.volume)} 張</span></td>
+    <td class="num"><span class="${cls(s.bias)}">${sgn(s.bias, 1)}%</span><span class="streak">MA20 ${fmt(s.ma20, priceDg(s.ma20))}</span></td>
+    <td class="num">${inst(s.foreign, s.foreign_streak)}</td>
+    <td class="num">${inst(s.trust, s.trust_streak)}</td>
+    <td class="l" style="min-width:160px">${sigs(s)}</td>
+  </tr>`).join("");
+  $("#cards").innerHTML = list.filter((s) => s.close != null).map((s) => `<div class="scard" data-code="${esc(s.code)}">
+    <div class="row1"><div class="name"><b>${esc(s.code)} ${esc(s.name)}</b>${del(s)}<span class="g">${groupLine(s)}</span></div>
+      <div style="text-align:right"><b class="num">${fmt(s.close, priceDg(s.close))}</b><br><b class="num ${cls(s.change)}">${arrow(s.change)} ${sgn(s.pct, 2)}%</b></div></div>
+    <div style="margin-top:6px">${spark(s.spark, s.spark?.length ? s.spark[s.spark.length - 1] >= s.spark[0] : true)}</div>
+    <div class="meta num"><span>量比 ${fmt(s.vol_ratio, 2)}</span><span>月線乖離 <b class="${cls(s.bias)}">${sgn(s.bias, 1)}%</b></span>
+      <span>外資 <b class="${cls(s.foreign)}">${sgn(s.foreign)}</b> ${streakText(s.foreign_streak, "")}</span><span>投信 <b class="${cls(s.trust)}">${sgn(s.trust)}</b> ${streakText(s.trust_streak, "")}</span></div>
+    <div style="margin-top:6px">${(s.signals || []).map((t) => `<span class="pill ${sigCls(t)}">${esc(t)}</span>`).join("")}</div>
+  </div>`).join("");
+  document.querySelectorAll("[data-del]").forEach((b) => b.onclick = (e) => { e.stopPropagation(); removeStock(b.dataset.del, b); });
+}
+
+/* ───────── 自選股新增／刪除（需透過本機伺服器） ───────── */
+const CAN_EDIT = SERVER && IS_LATEST;
+let lastAdded = null;
+let toastTimer;
+function toast(msg, { err = false, html = false, ms = 3200 } = {}) {
+  const t = $("#toast");
+  t[html ? "innerHTML" : "textContent"] = msg;
+  t.className = "toast show" + (err ? " err" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (t.className = "toast"), ms);
+}
+async function api(path, body) {
+  const r = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || `伺服器錯誤（${r.status}）`);
+  return j;
+}
+function refreshAfterEdit() {
+  renderHero(); renderFilters(); renderTable(); renderChecklist(); initCalc(); renderTagOptions(); renderRanking();
+}
+function renderTagOptions() {
+  const tags = [...new Set(["自選", ...(D.stocks || []).map((s) => s.tag).filter(Boolean)])];
+  const cur = $("#add-tag").value || store.get("tw.addTag", "自選");
+  $("#add-tag").innerHTML = tags.map((t) => `<option ${t === cur ? "selected" : ""}>${esc(t)}</option>`).join("") + `<option value="__new">＋ 新分類…</option>`;
+}
+async function addStock(code) {
+  code = (code || "").trim().toUpperCase();
+  if (!code) { $("#add-code").focus(); return; }
+  let tag = $("#add-tag").value;
+  if (tag === "__new") {
+    tag = (prompt("新分類名稱（例如：觀察、長抱、短線）") || "").trim();
+    if (!tag) { renderTagOptions(); return; }
+  }
+  store.set("tw.addTag", tag);
+  const btn = $("#add-btn");
+  btn.disabled = true; btn.textContent = "抓取資料中…";
+  closeAc();
+  try {
+    const { stock } = await api("/api/watchlist", { code, tag });
+    D.stocks = (D.stocks || []).filter((s) => s.code !== stock.code).concat(stock);
+    lastAdded = stock.code;
+    if (state.filter !== "all" && state.filter !== stock.tag) state.filter = "all";
+    $("#add-code").value = "";
+    refreshAfterEdit();
+    document.querySelector(`tr[data-code="${CSS.escape(stock.code)}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+    toast(`已加入 ${stock.name}（${stock.code}）`);
+  } catch (e) {
+    toast(e.message, { err: true, ms: 5000 });
+  } finally {
+    btn.disabled = false; btn.textContent = "＋ 加入自選";
+    renderRanking();
+  }
+}
+// 按第一次 × 變成「確定移除？」，3 秒內再按一次才刪除
+let armed = null, armTimer;
+async function removeStock(code, btn) {
+  const s = (D.stocks || []).find((x) => x.code === code);
+  if (!s) return;
+  if (armed !== code) {
+    document.querySelectorAll(".del.armed").forEach((b) => { b.classList.remove("armed"); b.textContent = "×"; });
+    armed = code;
+    if (btn) { btn.classList.add("armed"); btn.textContent = "確定移除？"; }
+    clearTimeout(armTimer);
+    armTimer = setTimeout(() => { armed = null; if (btn) { btn.classList.remove("armed"); btn.textContent = "×"; } }, 3000);
+    return;
+  }
+  armed = null; clearTimeout(armTimer);
+  document.querySelectorAll(`[data-code="${CSS.escape(code)}"]`).forEach((el) => el.classList.add("busy"));
+  try {
+    await api("/api/watchlist/delete", { code });
+    D.stocks = D.stocks.filter((x) => x.code !== code);
+    refreshAfterEdit();
+    toast(`已移除 ${s.name}（${code}）`);
+  } catch (e) {
+    document.querySelectorAll(`[data-code="${CSS.escape(code)}"]`).forEach((el) => el.classList.remove("busy"));
+    toast(e.message, { err: true, ms: 5000 });
+  }
+}
+
+/* 搜尋建議 */
+let acItems = [], acIdx = -1, acTimer;
+function closeAc() { $("#ac-list").classList.remove("open"); acIdx = -1; }
+function drawAc() {
+  const box = $("#ac-list");
+  if (!acItems.length) { box.innerHTML = `<button disabled>找不到符合的股票</button>`; box.classList.add("open"); return; }
+  box.innerHTML = acItems.map((it, i) => `<button role="option" data-i="${i}" class="${i === acIdx ? "on" : ""}" ${it.held ? "disabled" : ""}>
+    <span><b>${esc(it.code)}</b> ${esc(it.name)}</span><span class="m">${it.held ? "已在自選" : esc(it.market)}</span></button>`).join("");
+  box.classList.add("open");
+  box.querySelectorAll("button[data-i]").forEach((b) => b.onmousedown = (e) => { e.preventDefault(); addStock(acItems[+b.dataset.i].code); });
+}
+function initAdder() {
+  if (WEB) { $("#readonly").hidden = false; $("#readonly").textContent = "這是網站唯讀版，每天收盤後自動更新。新增或刪除自選股請在自己電腦上的儀表板操作。"; return; }
+  if (!SERVER) { $("#readonly").hidden = false; return; }
+  if (!IS_LATEST) { $("#readonly").hidden = false; $("#readonly").textContent = "這是過去日期的報告，只能瀏覽。回到最新日期即可新增或刪除自選股。"; return; }
+  $("#adder").hidden = false;
+  renderTagOptions();
+  const input = $("#add-code");
+  input.addEventListener("input", () => {
+    clearTimeout(acTimer);
+    const q = input.value.trim();
+    if (!q) { closeAc(); return; }
+    acTimer = setTimeout(async () => {
+      try { acItems = await api("/api/lookup?q=" + encodeURIComponent(q)); acIdx = acItems.findIndex((x) => !x.held); drawAc(); } catch { closeAc(); }
+    }, 180);
+  });
+  input.addEventListener("keydown", (e) => {
+    const open = $("#ac-list").classList.contains("open");
+    if (e.key === "ArrowDown" && open) { e.preventDefault(); acIdx = Math.min(acItems.length - 1, acIdx + 1); drawAc(); }
+    else if (e.key === "ArrowUp" && open) { e.preventDefault(); acIdx = Math.max(0, acIdx - 1); drawAc(); }
+    else if (e.key === "Enter") { e.preventDefault(); const it = open && acItems[acIdx]; addStock(it && !it.held ? it.code : input.value); }
+    else if (e.key === "Escape") closeAc();
+  });
+  input.addEventListener("blur", () => setTimeout(closeAc, 150));
+  $("#add-btn").onclick = () => { const it = acItems[acIdx]; const v = input.value.trim(); addStock(it && !it.held && $("#ac-list").classList.contains("open") ? it.code : v); };
+  $("#add-tag").onchange = () => {
+    if ($("#add-tag").value !== "__new") { store.set("tw.addTag", $("#add-tag").value); return; }
+    const name = (prompt("新分類名稱（例如：觀察、長抱、短線）") || "").trim();
+    if (name) { store.set("tw.addTag", name); $("#add-tag").insertAdjacentHTML("afterbegin", `<option>${esc(name)}</option>`); $("#add-tag").value = name; }
+    else renderTagOptions();
+  };
+}
+
+/* 自動更新：頁面開著時，有新資料就重新載入（觀察清單、表格都會跟著更新） */
+function initAutoRefresh() {
+  if (!SERVER || !IS_LATEST) return;
+  const check = async () => {
+    try {
+      const j = await api("/api/latest");
+      if (j.date && (j.date !== D.date || j.generated_at !== D.generated_at)) {
+        const busy = document.activeElement && ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName);
+        if (busy) toast(`有新資料（${j.date.replaceAll("-", "/")}）<a href="/">立即更新</a>`, { html: true, ms: 15000 });
+        else location.reload();
+      }
+    } catch {}
+  };
+  setInterval(check, 5 * 60 * 1000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+}
+
+/* ───────── 觀察清單 ───────── */
+function autoChecks() {
+  const out = [], m = D.market, opt = D.options, inst = D.institutions, fut = D.futures;
+  if (opt) {
+    out.push(`台指期能否守住 ${fmt(opt.put_wall.k)} 支撐（賣權最大未平倉）`);
+    out.push(`上方 ${fmt(opt.call_wall.k)} 壓力能否突破（買權最大未平倉）`);
+    out.push(`${md(opt.nearest.expiry)} 選擇權結算，最大痛點 ${fmt(opt.nearest.max_pain)}`);
+  }
+  if (m.ma20) out.push(`加權指數${m.close >= m.ma20 ? "能否守住" : "能否站回"}月線 ${fmt(m.ma20)}`);
+  if (inst?.foreign_streak && Math.abs(inst.foreign_streak) >= 3) out.push(`外資現貨${streakText(inst.foreign_streak, "")}，觀察是否${inst.foreign_streak < 0 ? "止賣" : "續買"}`);
+  if (fut) out.push(`夜盤台指期相對今日收盤 ${fmt(fut.close)} 的方向`);
+  (D.stocks || []).filter((s) => s.signals?.some((t) => /漲停|跌停|爆量|新高|新低/.test(t))).slice(0, 4)
+    .forEach((s) => out.push(`${s.name}（${s.code}）${s.signals.filter((t) => /漲停|跌停|爆量|新高|新低/.test(t)).join("、")}後的隔日表現`));
+  return out;
+}
+function renderChecklist() {
+  const key = "tw.check." + D.date;
+  const checked = store.get(key, {});
+  const custom = store.get("tw.custom", []);
+  const items = [...autoChecks().map((t) => ({ t, auto: true })), ...custom.map((t, i) => ({ t, i }))];
+  $("#checklist").innerHTML = items.map((it, n) => `<label><input type="checkbox" data-n="${n}" ${checked[it.t] ? "checked" : ""}><span class="${checked[it.t] ? "done" : ""}">${esc(it.t)}</span>${it.auto ? "" : `<button class="x" data-i="${it.i}" title="刪除" aria-label="刪除">×</button>`}</label>`).join("") || `<div class="empty">沒有觀察項目</div>`;
+  $("#checklist").querySelectorAll("input").forEach((cb) => cb.onchange = () => {
+    const t = items[+cb.dataset.n].t; checked[t] = cb.checked; store.set(key, checked); renderChecklist();
+  });
+  $("#checklist").querySelectorAll(".x").forEach((b) => b.onclick = (e) => {
+    e.preventDefault(); custom.splice(+b.dataset.i, 1); store.set("tw.custom", custom); renderChecklist();
+  });
+}
+$("#add-form").onsubmit = (e) => {
+  e.preventDefault();
+  const v = $("#add-input").value.trim(); if (!v) return;
+  const custom = store.get("tw.custom", []); custom.push(v); store.set("tw.custom", custom);
+  $("#add-input").value = ""; renderChecklist();
+};
+
+/* ───────── 損益試算 ───────── */
+function initCalc() {
+  const list = (D.stocks || []).filter((s) => s.close != null);
+  $("#c-stock").innerHTML = list.map((s) => `<option value="${esc(s.code)}">${esc(s.code)} ${esc(s.name)}（收 ${fmt(s.close, priceDg(s.close))}）</option>`).join("") + `<option value="">自行輸入</option>`;
+  const saved = store.get("tw.calc", null);
+  if (saved) ["cost", "shares", "disc", "tax", "sl", "tp", "risk"].forEach((k) => { if (saved[k] != null) $("#c-" + k).value = saved[k]; });
+  if (saved?.code != null) $("#c-stock").value = saved.code;
+  const fillNow = () => { const s = list.find((x) => x.code === $("#c-stock").value); if (s) $("#c-now").value = s.close; };
+  fillNow();
+  if (!$("#c-cost").value) $("#c-cost").value = $("#c-now").value;
+  $("#c-stock").onchange = () => { fillNow(); calc(); };
+  document.querySelectorAll(".form input, .form select").forEach((el) => { el.oninput = calc; });
+  calc();
+}
+function calc() {
+  const g = (id) => parseFloat($("#c-" + id).value);
+  const cost = g("cost") || 0, sh = g("shares") || 0, now = g("now") || 0, disc = isNaN(g("disc")) ? 1 : g("disc"), tax = g("tax"), sl = g("sl") || 0, tp = g("tp") || 0, risk = g("risk") || 0;
+  store.set("tw.calc", { code: $("#c-stock").value, cost: $("#c-cost").value, shares: $("#c-shares").value, disc: $("#c-disc").value, tax: $("#c-tax").value, sl: $("#c-sl").value, tp: $("#c-tp").value, risk: $("#c-risk").value });
+  const fee = (amt) => amt > 0 ? Math.max(20, Math.floor(amt * 0.001425 * disc)) : 0;
+  const buyAmt = cost * sh, sellAmt = now * sh;
+  const buyFee = fee(buyAmt), sellFee = fee(sellAmt), sellTax = Math.floor(sellAmt * tax);
+  const pnl = sellAmt - buyAmt - buyFee - sellFee - sellTax;
+  const roi = buyAmt ? pnl / (buyAmt + buyFee) * 100 : 0;
+  const breakeven = sh ? (buyAmt + buyFee) / (sh * (1 - 0.001425 * disc - tax)) : 0;
+  const slPrice = cost * (1 - sl / 100), tpPrice = cost * (1 + tp / 100);
+  const perShareLoss = cost - slPrice + cost * 0.001425 * disc * 2 + slPrice * tax;
+  const lots = perShareLoss > 0 ? Math.floor(risk / perShareLoss / 1000) : 0;
+  const dg = priceDg(cost);
+  $("#c-result").innerHTML = `
+    <div class="wide"><span>賣出後淨損益（扣手續費 ${fmt(buyFee + sellFee)} 元、證交稅 ${fmt(sellTax)} 元）</span><b class="num ${cls(pnl)}">${sgn(pnl)} 元（${sgn(roi, 2)}%）</b></div>
+    <div><span>損益兩平價</span><b class="num">${fmt(breakeven, 2)}</b></div>
+    <div><span>投入成本</span><b class="num">${fmt(buyAmt + buyFee)} 元</b></div>
+    <div><span>停損價（−${fmt(sl, 1)}%）</span><b class="num down">${fmt(slPrice, dg)}</b></div>
+    <div><span>停利價（＋${fmt(tp, 1)}%）</span><b class="num up">${fmt(tpPrice, dg)}</b></div>
+    <div class="wide"><span>依可承受虧損 ${fmt(risk)} 元，在此停損距離下最多可買</span><b class="num">${fmt(lots)} 張</b> <span style="display:inline">（每張停損約虧 ${fmt(perShareLoss * 1000)} 元）</span></div>`;
+}
+
+/* ───────── 複製摘要 ───────── */
+$("#copy-btn").onclick = async () => {
+  const { headline, bullets } = buildSummary();
+  const lines = [`【台股盤後摘要】${D.date.replaceAll("-", "/")}（${wk(D.date)}）`, "", headline, "", ...bullets.map((b) => "• " + b)];
+  if (D.options) lines.push("", `關鍵價位：壓力 ${fmt(D.options.call_wall.k)} ／ 支撐 ${fmt(D.options.put_wall.k)} ／ 最大痛點 ${fmt(D.options.nearest.max_pain)}`);
+  lines.push("", "※ 依公開資料自動整理，僅供參考。");
+  const text = lines.join("\n"), btn = $("#copy-btn");
+  try { await navigator.clipboard.writeText(text); btn.textContent = "已複製"; }
+  catch {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); btn.textContent = "已複製"; } catch { btn.textContent = "複製失敗"; }
+    ta.remove();
+  }
+  setTimeout(() => (btn.textContent = "複製盤後摘要"), 2000);
+};
+
+/* ───────── 主題與配色切換 ───────── */
+function applyPrefs() {
+  const ud = store.get("tw.updown", "tw");
+  let th = store.get("tw.theme", "dark");
+  if (th !== "light") th = "dark";      // 交易終端外觀預設深色
+  document.documentElement.dataset.updown = ud;
+  document.documentElement.dataset.theme = th;
+  document.querySelectorAll("[data-ud]").forEach((b) => b.classList.toggle("on", b.dataset.ud === ud));
+  document.querySelectorAll("[data-th]").forEach((b) => b.classList.toggle("on", b.dataset.th === th));
+}
+document.querySelectorAll("[data-ud]").forEach((b) => b.onclick = () => { store.set("tw.updown", b.dataset.ud); applyPrefs(); });
+document.querySelectorAll("[data-th]").forEach((b) => b.onclick = () => { store.set("tw.theme", b.dataset.th); applyPrefs(); renderCharts(); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", renderCharts);
+$("#search").addEventListener("input", (e) => { state.q = e.target.value; renderTable(); });
+
+applyPrefs();
+renderTicker();
+renderTop();
+renderHero();
+renderKpis();
+renderMargin();
+renderCharts();
+renderRanking();
+renderFilters();
+renderTable();
+renderChecklist();
+initCalc();
+initAdder();
+initAutoRefresh();
+</script>
+</body>
+</html>
